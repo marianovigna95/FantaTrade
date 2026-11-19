@@ -66,12 +66,17 @@ def build(csv_paths):
                 unknown.append(pid)
                 continue
             if team not in teams:
-                teams[team] = {"name": team, "players": [], "paid": {}}
+                # players/paid sono posizioni nel listone (comode per l'app), sids/paidSid
+                # sono gli id ufficiali: se un giorno data.json cambia ordine, l'app rimappa
+                # dalle rose per id invece di fidarsi delle posizioni
+                teams[team] = {"name": team, "players": [], "sids": [], "paid": {}, "paidSid": {}}
                 order.append(team)
             if idx not in teams[team]["players"]:
                 teams[team]["players"].append(idx)
+                teams[team]["sids"].append(pid)
             if price:
                 teams[team]["paid"][idx] = price
+                teams[team]["paidSid"][str(pid)] = price
                 paid_total += price
                 model_total += max(1.0, (data[idx].get("qa") or 1) * PRICE_K)
 
