@@ -82,6 +82,29 @@ def norm(s):
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", s)).strip()
 
 
+# sotto questa soglia il listone è chiaramente incompleto (blocco, pagina cambiata, errore di rete)
+MIN_LISTONE = 250
+
+
+def quotazioni_da_data():
+    """Ultima quotazione buona, presa da app/data.json: permette di aggiornare le statistiche
+    anche quando fantacalcio.it blocca il runner (403) o cambia pagina."""
+    path = ROOT / "app" / "data.json"
+    if not path.exists():
+        return []
+    out = []
+    for p in json.loads(path.read_text()):
+        if not p.get("n") or not p.get("r"):
+            continue
+        out.append({"n": p["n"], "r": p["r"], "t": p.get("t") or "", "code": "",
+                    "qi": p.get("qi"), "qa": p.get("qa") or p.get("q"), "fvm": p.get("fvm"),
+                    "sid": p.get("sid")})
+    for p in out:
+        if not p["qa"]:
+            p["qa"] = p["qi"] or 1
+    return out
+
+
 # ------------------------------------------------------- 1. listone ufficiale
 def parse_quotazioni():
     """Listone ufficiale Fantacalcio.it: nome, ruolo classico, squadra, QI, QA, FVM, id."""
@@ -120,9 +143,11 @@ def parse_quotazioni():
         if not p["qa"]:
             p["qa"] = p["qi"] or 1
     print(f"  listone ufficiale fantacalcio.it: {len(out)} giocatori")
-     (ROOT / "data").mkdir(exist_ok=True)
-    (ROOT / "data" / "listone_fc_raw.json").write_text(json.dumps(out, ensure_ascii=False, indent=0))
-    (ROOT / "data" / "listone_fc_raw.json").write_text(json.dumps(out, ensure_ascii=False, indent=0))
+    try:
+        (ROOT / "data").mkdir(exist_ok=True)
+        (ROOT / "data" / "listone_fc_raw.json").write_text(json.dumps(out, ensure_ascii=False, indent=0))
+    except OSError:
+        pass
     return out
 
 
@@ -268,6 +293,13 @@ def main():
 
     print("1/4 listone ufficiale fantacalcio.it…")
     quot = parse_quotazioni()
+    if len(quot) < MIN_LISTONE:
+        print(f"  ! listone non leggibile ({len(quot)} giocatori): riuso le quotazioni già in app/data.json")
+        quot = quotazioni_da_data()
+        if len(quot) < MIN_LISTONE:
+            print("  ! nessuna quotazione disponibile: NON tocco app/data.json e mi fermo", file=sys.stderr)
+            sys.exit(1)
+        print(f"  quotazioni riusate: {len(quot)} giocatori (listone non riscaricato)")
     print("2/4 indice statistiche…")
     dev = dev_index()
     print("3/4 abbinamento…")
@@ -313,6 +345,9 @@ def main():
             "log": st.get("log") or [],
         })
     players.sort(key=lambda x: (-(x["a"] or 0), x["n"]))
+    if len(players) < MIN_LISTONE:  # rete che restituisce poco: meglio non scrivere niente
+        print(f"  ! solo {len(players)} giocatori ricostruiti: NON sovrascrivo app/data.json", file=sys.stderr)
+        sys.exit(1)
     print(f"  database finale: {len(players)} giocatori ({senza_stats} senza statistiche stagionali)")
 
     (ROOT / "app" / "data.json").write_text(json.dumps(players, ensure_ascii=False, indent=0))
