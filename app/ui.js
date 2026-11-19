@@ -555,7 +555,8 @@
       return '<li data-id="' + id + '" data-side="' + side + '" class="' + (on ? 'sel' : '') + '">' +
         '<span class="mark">✓</span>' +
         '<span class="badge ' + p.r + '">' + p.r + '</span>' +
-        '<span style="min-width:0"><span class="nm">' + esc(p.n) + '</span> <span class="tm">' + esc(p.t) + '</span></span>' +
+        '<span style="min-width:0"><span class="nm">' + esc(p.n) + '</span> <span class="tm">' + esc(p.t) + '</span>' +
+          (p.fuori ? ' <span class="out-badge small" title="' + esc(outTitle(id)) + '">FUORI</span>' : '') + '</span>' +
         '<span class="avail ' + (state.avail[id] || '') + '" data-avail="' + id + '" title="Stato: clicca per cambiare (disponibile → in dubbio → out)">' +
           (state.avail[id] === 'out' ? '✕' : state.avail[id] === 'dubbio' ? '!' : '✓') + '</span>' +
         (function () {
@@ -597,7 +598,7 @@
       return ids.map(function (id) {
         var p = P(id);
         return '<span class="chip"><span class="badge ' + p.r + '">' + p.r + '</span><b>' + esc(p.n) + '</b>' +
-          '<span class="mt">' + esc(p.t) + '</span>' +
+          '<span class="mt">' + esc(p.t) + '</span>' + fuoriBadge(id) +
           '<span class="x" data-remove="' + id + '" data-side="' + side + '">×</span></span>';
       }).join('');
     }
@@ -637,8 +638,13 @@
   function profileOf(id) { return M.starterProfile(POOL, id); }
 
   function profileNote(id) {
-    var sp = profileOf(id); if (!sp) return '';
-    var out = [sp.label];
+    // fuori / probabile titolare vengono prima del profilo: contano piu' di tutto il resto
+    var out = [];
+    var fuori = M.outNote(POOL[id]);
+    if (fuori) out.push(fuori.tipo === 'squalificato' ? 'squalificato' : 'fuori (infortunio)');
+    var lu = M.starterProb(POOL[id]);
+    if (lu != null) out.push('titolare ' + Math.round(lu * 100) + '%');
+    var sp = profileOf(id); if (!sp) return out.join(' · ');
     if (sp.rival) out.push('ballottaggio con ' + esc(POOL[sp.rival.id].n));
     else if (sp.aheadOf && (sp.label === 'primo cambio' || sp.label === 'riserva')) out.push('dietro ' + esc(POOL[sp.aheadOf.id].n));
     if (sp.missed >= 2) out.push(sp.missed + ' giornate saltate');
@@ -660,6 +666,24 @@
 
   // riga "contro" quando il giocatore che arriva ha il posto in bilico
   function riskLine(id) {
+    // chi e' fuori oggi e' il rischio numero uno, prima di qualunque ragionamento sui numeri
+    var fuori = outBody(POOL[id]);
+    if (fuori.tipo) {
+      var quando = fuori.rientro
+        ? ' Rientro previsto: ' + fuori.rientro.charAt(0).toLowerCase() + fuori.rientro.slice(1) + '.'
+        : '';
+      if (fuori.giorni != null) {
+        quando += ' Sono circa ' + Math.max(1, Math.round(fuori.giorni / 7)) + ' giornate di stop: ' +
+          'i punti attesi qui sopra sono già mediati su questo, non sono quelli di quando rientra.';
+      }
+      return {
+        t: esc(POOL[id].n) + (fuori.tipo === 'squalificato' ? ' è squalificato' : ' è fuori (infortunio)'),
+        d: (fuori.text || 'Indisponibile secondo Fantacalcio.it.') + quando +
+          ' I punti attesi qui sopra scontano già lo stop (probabilità di giocare al ' +
+          Math.round(M.playProb(POOL[id]) * 100) + '%): se rientra prima valgono di più, ' +
+          'ma finché è fuori non ti dà niente.'
+      };
+    }
     var sp = profileOf(id); if (!sp) return null;
     if (sp.rival) return { t: esc(POOL[id].n) + ' è in ballottaggio con ' + esc(POOL[sp.rival.id].n),
       d: 'Stesso ruolo, stesso club: tu lo paghi ' + fmt(ev(id), 2) + ' pt/g, il concorrente ne vale ' + fmt(sp.rival.ev, 2) + '. Se il posto lo perde, scende verso ' + fmt(sp.fallback, 2) + ': è un rischio che i punti attesi non prezzano.' };
@@ -1157,9 +1181,16 @@
     }, 30);
   }
 
+  // bollino FUORI da mettere accanto a un nome, ovunque compaia
+  function fuoriBadge(id) {
+    if (!POOL[id] || !POOL[id].fuori) return '';
+    return ' <span class="out-badge small" title="' + esc(outTitle(id)) + '">FUORI</span>';
+  }
+
   function chip(id) {
     var p = P(id);
-    return '<span class="chip"><span class="badge ' + p.r + '">' + p.r + '</span><b>' + esc(p.n) + '</b><span class="mt">' + esc(p.t) + '</span></span>';
+    return '<span class="chip"><span class="badge ' + p.r + '">' + p.r + '</span><b>' + esc(p.n) + '</b>' + fuoriBadge(id) +
+      '<span class="mt">' + esc(p.t) + '</span></span>';
   }
 
   /* ---------- scheda Report: la mia squadra, la classifica, le offerte ---------- */
@@ -1581,7 +1612,7 @@
       return;
     }
     function chipHtml(id) {
-      return '<span class="chip"><span class="badge ' + POOL[id].r + '">' + POOL[id].r + '</span><b>' + esc(POOL[id].n) + '</b>' +
+      return '<span class="chip"><span class="badge ' + POOL[id].r + '">' + POOL[id].r + '</span><b>' + esc(POOL[id].n) + '</b>' + fuoriBadge(id) +
         '<span class="mt">' + esc(POOL[id].t) + ' · ' + fmt(ev(id), 2) + '</span></span>';
     }
     function propHtml(o, idx) {
@@ -1742,14 +1773,103 @@
   var advFlags = null;
   function advPresence() {
     if (advFlags) return advFlags;
-    var a = false, i = false;
+    var a = false, i = false, o = false, l = false;
     for (var k = 0; k < POOL.length; k++) {
       if (!a && M.hasAdv(POOL[k])) a = true;
       if (!i && M.injuryProfile(POOL[k])) i = true;
-      if (a && i) break;
+      if (!o && POOL[k].fuori) o = true;
+      if (!l && M.starterProb(POOL[k]) != null) l = true;
+      if (a && i && o && l) break;
     }
-    advFlags = { adv: a, inj: i };
+    advFlags = { adv: a, inj: i, out: o, lu: l };
     return advFlags;
+  }
+
+  // motivo dell'indisponibilita' ripulito: tolgo la frase del rientro (che mostro a parte),
+  // metto la maiuscola e chiudo con il punto. Restituisce {tipo, text, rientro}.
+  function outBody(p) {
+    var n = M.outNote(p);
+    if (!n) return { tipo: '', text: '', rientro: '' };
+    var perche = (n.perche || '').replace(/\s+/g, ' ').trim();
+    var key = (n.rientro || '').replace(/[.…;\s]+$/, '').toLowerCase().slice(0, 24);
+    if (perche && key) {
+      var tenute = perche.split(/[.;]\s+|,\s+/).filter(function (c) {
+        return c.toLowerCase().indexOf(key) < 0;
+      });
+      if (tenute.length) perche = tenute.join(', ');
+    }
+    perche = perche.replace(/[,;]\s*$/, '').trim();
+    if (perche) perche = perche.charAt(0).toUpperCase() + perche.slice(1);
+    if (perche && !/[.!?…]$/.test(perche)) perche += '.';
+    return { tipo: n.tipo, text: perche, rientro: n.rientro, giorni: p.fuoriGiorni };
+  }
+
+  function outTitle(i) {
+    var p = POOL[i], fuori = outBody(p);
+    if (!fuori.tipo) return '';
+    var t = fuori.tipo === 'squalificato' ? 'Squalificato' : 'Fuori per infortunio';
+    if (fuori.text) t += ': ' + fuori.text;
+    if (fuori.rientro) t += ' — ' + fuori.rientro;
+    if (fuori.giorni != null) t += ' (circa ' + Math.max(1, Math.round(fuori.giorni / 7)) + ' giornate)';
+    return t;
+  }
+
+  // ---------------------------------------------------------------- chi e' fuori adesso
+  function renderAvailCard() {
+    var box = $('#availCard');
+    if (!box) return;
+    var info = (typeof window !== 'undefined' && window.FANTATRADE_AVAIL) || null;
+    var fuori = [];
+    for (var i = 0; i < POOL.length; i++) if (POOL[i].fuori) fuori.push(i);
+    if (!info || (!fuori.length && !advPresence().lu)) { box.style.display = 'none'; return; }
+    box.style.display = '';
+
+    // i miei giocatori fuori vengono per primi: sono quelli che mi cambiano la domenica
+    var mine = {}, inLega = {};
+    var L = curLeague() || { teams: [] };
+    (L.teams || []).forEach(function (t, ti) {
+      (t.players || []).forEach(function (id) {
+        inLega[id] = true;
+        if (ti === state.my) mine[id] = true;
+      });
+    });
+    fuori.sort(function (a, b) {
+      var ma = mine[a] ? 0 : 1, mb = mine[b] ? 0 : 1;
+      return ma - mb || POOL[a].t.localeCompare(POOL[b].t) || POOL[a].n.localeCompare(POOL[b].n);
+    });
+
+    var miei = fuori.filter(function (i) { return mine[i]; });
+    var dataTxt = info.data ? ' del ' + info.data.split('-').reverse().join('/') : '';
+
+    box.innerHTML =
+      '<div class="toolbar" style="margin:0 0 8px">' +
+        '<h2 style="margin:0">Indisponibili adesso</h2>' +
+        '<span class="grow"></span>' +
+        '<span class="dim" style="font-size:12px">' + fuori.length + ' giocatori · fantacalcio.it' + dataTxt + '</span>' +
+      '</div>' +
+      (miei.length
+        ? '<p class="avail-mine"><b>' + miei.length + '</b> dei tuoi: ' + miei.map(function (i) {
+            return esc(POOL[i].n) + ' <span class="dim">(' + esc(POOL[i].t) + ')</span>';
+          }).join(' · ') + '</p>'
+        : '<p class="hint" style="margin:0 0 6px">Nessuno dei tuoi giocatori risulta indisponibile.</p>') +
+      '<details class="avail-list"><summary>Tutti gli indisponibili, squadra per squadra</summary>' +
+        (function () {
+          var byTeam = {};
+          fuori.forEach(function (i) { (byTeam[POOL[i].t] = byTeam[POOL[i].t] || []).push(i); });
+          return Object.keys(byTeam).sort().map(function (t) {
+            return '<div class="avail-team"><h4>' + esc(t) + '</h4><ul>' +
+              byTeam[t].map(function (i) {
+                var p = POOL[i], fuori = outBody(p);
+                return '<li class="' + (mine[i] ? 'mine' : inLega[i] ? 'inlega' : '') + '"><b>' + esc(p.n) + '</b>' +
+                  ' <span class="avail-tag ' + (fuori.tipo === 'squalificato' ? 'sq' : 'inf') + '">' +
+                  (fuori.tipo === 'squalificato' ? 'squalifica' : 'infortunio') + '</span>' +
+                  (fuori.rientro ? ' <span class="avail-when">' + esc(fuori.rientro) + '</span>' : '') +
+                  (fuori.text ? '<div class="avail-why">' + esc(fuori.text) + '</div>'
+                              : '<div class="avail-why dim">Il sito non dice altro.</div>') + '</li>';
+              }).join('') + '</ul></div>';
+          }).join('');
+        })() +
+      '</details>';
   }
 
   function renderPlayers() {
@@ -1767,6 +1887,8 @@
         xg90: (function (a) { return a && a.xg90 != null ? a.xg90 : -1; })(M.advStats(p)),
         fin: (function (a) { return a && a.finishing != null ? a.finishing : null; })(M.advStats(p)),
         injr: (function (j) { return j ? j.perGw : -1; })(M.injuryProfile(p)),
+        fuori: p.fuori ? 1 : 0,
+        titol: (function (l) { return l == null ? -1 : l; })(M.starterProb(p)),
         prof: (function (sp) {
           return sp.label === 'titolare fisso' ? 4 : sp.label === 'titolare in ballottaggio' ? 3 :
             sp.label === 'titolare a intermittenza' ? 2.5 : sp.label === 'mezza partita' ? 1.5 :
@@ -1789,6 +1911,12 @@
       var formCls = r.form > 0.25 ? 'pos' : r.form < -0.25 ? 'neg' : 'neu';
       return '<tr><td><span class="badge ' + r.r + '">' + r.r + '</span></td>' +
         '<td class="nm">' + esc(r.n) + '</td><td style="color:var(--muted)">' + esc(r.t) + '</td>' +
+        '<td class="col-out">' + (r.fuori ? '<span class="out-badge" title="' + esc(outTitle(r.i)) + '">FUORI</span>' : '–') + '</td>' +
+        '<td class="col-lu ' + (r.titol < 0 ? '' : r.titol >= 0.7 ? 'pos' : r.titol >= 0.4 ? 'neu' : 'neg') + '"' +
+          ' title="' + (r.titol < 0 ? 'Nessuna indicazione dalle probabili formazioni' :
+            r.titol > 0 ? 'Secondo le probabili formazioni di giornata parte titolare nel ' + Math.round(r.titol * 100) + '% dei casi' :
+            'Nelle probabili formazioni di giornata è in panchina') + '">' +
+          (r.titol < 0 ? '–' : Math.round(r.titol * 100) + '%') + '</td>' +
         '<td>' + Math.round(r.pres) + '</td>' +
         '<td>' + (r.pres ? Math.round(r.minshare * 100) + '%' : '–') + '</td>' +
         '<td>' + (r.fm ? fmt(r.fm, 2) : '–') + '</td>' +
@@ -1876,6 +2004,17 @@
       row('xA/90 (assist attesi)', aa.xa90, ab.xa90, 1, numFmt);
       row('Assist', A.ass, B.ass, 1, intFmt);
     }
+    if (A.fuori || B.fuori) {
+      var stTxt = function (p) {
+        var n = M.outNote(p);
+        if (!n) return 'disponibile';
+        return n.tipo === 'squalificato' ? 'squalificato' : 'fuori';
+      };
+      row('Stato di oggi', stTxt(A), stTxt(B), 0);
+    }
+    if (M.starterProb(A) != null || M.starterProb(B) != null) {
+      row('Probabile titolare', M.starterProb(A), M.starterProb(B), 1, pctFmt);
+    }
     row('Giornate saltate', sa.missed || 0, sb.missed || 0, -1, intFmt);
     if (calA != null || calB != null) row('Calendario (più alto = più facile)', calA, calB, 1, pctFmt);
 
@@ -1895,6 +2034,15 @@
     var d = pa - pb, win = d >= 0 ? A : B, lose = d >= 0 ? B : A, wIdx = d >= 0 ? i : j;
     var sp = M.starterProfile(POOL, wIdx) || {};
     var parts = [];
+    // se uno dei due oggi è indisponibile è la prima cosa da dire: conta più di ogni numero
+    [i, j].forEach(function (k) {
+      var p = POOL[k], fuori = M.outNote(p);
+      if (!fuori) return;
+      var rientro = fuori.rientro ? ' (' + fuori.rientro.charAt(0).toLowerCase() + fuori.rientro.slice(1) + ')' : '';
+      parts.push('<b>' + esc(p.n) + (fuori.tipo === 'squalificato' ? ' è squalificato</b>' : ' è fuori per infortunio</b>') +
+        rientro + ': adesso la sua probabilità di giocare è al ' + Math.round(M.playProb(p) * 100) +
+        '%, quindi i punti attesi valgono meno di quelli che ha fatto.');
+    });
     if (Math.abs(d) < 0.15) {
       parts.push('<b>Praticamente pari</b>: ' + esc(A.n) + ' e ' + esc(B.n) + ' stanno entro ' + fmt(0.15, 2) +
         ' pt/g (' + fmt(pa) + ' contro ' + fmt(pb) + '). Decide il ruolo, il cartellino o cosa ti serve in rosa, non il numero.');
@@ -1970,6 +2118,8 @@
       var f = advPresence();
       document.body.classList.toggle('has-adv', f.adv);
       document.body.classList.toggle('has-inj', f.inj);
+      document.body.classList.toggle('has-out', f.out);
+      document.body.classList.toggle('has-lu', f.lu);
     })();
     M.setProspect(state.prospect);
     rateCache = null;
@@ -1979,6 +2129,7 @@
     saveState();
     renderRoster('A'); renderRoster('B');
     renderSummary(); renderVerdict();
+    renderAvailCard();
     if ($('#tab-players').classList.contains('active')) { renderPlayers(); renderCompare(); }
     renderChanges();
     if ($('#tab-league').classList.contains('active')) renderLeague();

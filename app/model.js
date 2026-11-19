@@ -36,6 +36,9 @@
     W_XA: 0.45,                    // idem per gli assist attesi (xA)
     BONUS_GOAL: 3,                 // bonus fantacalcio per gol
     BONUS_ASSIST: 1,               // bonus per assist
+    K_FUORI: 0.06,                 // probabilita' di giocare di chi resta fuori tutta la stagione (pavimento)
+    SEASON_GW: 38,                 // giornate del campionato, per tradurre i giorni di stop in giornate perse
+    OUT_UNKNOWN_SHARE: 0.5,        // se il sito non dice quando rientra, ipotizzo meta' del tempo rimasto fuori
     K_INJ: 0.35,                   // quanto pesa lo storico infortuni nella probabilita' di giocare
     INJ_WINDOW_DAYS: 730,          // finestra dello storico infortuni (due stagioni)
     CREDIT_TILT: 0.35,             // il punto vale di più sui giocatori forti (mercato convesso)
@@ -306,6 +309,22 @@
     };
   }
 
+  // indisponibilita' di oggi in una riga: "Fuori: lesione muscolare (rientro a dicembre)"
+  function outNote(p) {
+    if (!p || !p.fuori) return null;
+    var tipo = p.fuori === 'squalifica' ? 'squalificato' : 'fuori';
+    var perche = String(p.fuoriPerche || '').trim();
+    var rientro = String(p.fuoriRientro || '').trim();
+    if (/squalific/i.test(perche)) tipo = 'squalificato';
+    return { tipo: tipo, perche: perche, rientro: rientro };
+  }
+
+  // probabilita' di partire titolare secondo le probabili formazioni (0..1) o null
+  function starterProb(p) {
+    if (!p || p.titolarita == null) return null;
+    return Math.max(0, Math.min(1, num(p.titolarita) / 100));
+  }
+
   // probabilita' di prendere il voto in una giornata: continuita' di presenze + minutaggio
   function playProb(p) {
     var base;
@@ -327,9 +346,22 @@
     // stato dichiarato a mano dall'utente (infortunio, squalifica, ballottaggio):
     // e' l'informazione che i dati storici non possono contenere
     var st = p.statusManual;
-    if (st === 'out') return Math.min(base, 0.05);
-    if (st === 'dubbio') return base * 0.55;
-    if (st === 'certo') return Math.min(1, base * 1.15 + 0.05);
+    if (st === 'out') base = Math.min(base, 0.05);
+    else if (st === 'dubbio') base = base * 0.55;
+    else if (st === 'certo') base = Math.min(1, base * 1.15 + 0.05);
+    // p.fuori = indisponibile ADESSO secondo il sito di Fantacalcio (infortunio o squalifica).
+    // Non e' un pronostico: e' un fatto, quindi scende quasi a zero qualunque cosa dica lo storico.
+    // ...ma se l'utente dice "certo" la sua parola vale piu' della fonte: sapra' lui
+    if (p.fuori && st !== 'certo') {
+      // il peso dello stop dipende da QUANTO dura: chi rientra fra dieci giorni perde una giornata,
+      // chi rientra ad aprile non vale quasi nulla. I giorni arrivano dalla frase del rientro.
+      var restanti = Math.max(1, CFG.SEASON_GW - CFG.GW);          // giornate che mancano
+      var giorni = (p.fuoriGiorni == null || !isFinite(p.fuoriGiorni))
+        ? restanti * 7 * CFG.OUT_UNKNOWN_SHARE
+        : Math.max(0, num(p.fuoriGiorni));
+      var share = Math.min(1, Math.max(giorni, 7) / (restanti * 7));   // almeno la giornata in corso
+      base = base * (1 - (1 - CFG.K_FUORI) * share);
+    }
     return base;
   }
 
@@ -931,6 +963,8 @@
     advStats: advStats,
     xgBonusPerMatch: xgBonusPerMatch,
     injuryProfile: injuryProfile,
+    outNote: outNote,
+    starterProb: starterProb,
     starterProfile: starterProfile,
     bonusPer90: bonusPer90,
     absenceRate: absenceRate,
