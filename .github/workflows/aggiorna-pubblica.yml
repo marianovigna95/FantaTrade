@@ -46,6 +46,8 @@ jobs:
       - name: Scarica dati aggiornati e ricompila
         run: |
           set -o pipefail
+          # tengo solo le ultime settimane di log: il file non deve crescere per sempre
+          [ -f aggiorna_log.txt ] && tail -n 400 aggiorna_log.txt > /tmp/log && mv /tmp/log aggiorna_log.txt || true
           echo "== $(date -u +%F\ %H:%M) refresh_data.py ==" >> aggiorna_log.txt
           python3 refresh_data.py --min-price 0 2>&1 | tee -a aggiorna_log.txt \
             || echo "::warning::refresh_data.py non riuscito, tengo i dati precedenti"
