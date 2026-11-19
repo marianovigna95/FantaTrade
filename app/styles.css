@@ -404,3 +404,17 @@ body:not(.has-cons) .col-cons{display:none}
   .lu-xi li:not(.lu-group){grid-template-columns:20px 20px minmax(0,1fr) 46px 30px}
   .lu-tags{display:none}
 }
+
+/* prospettiva: tre scelte raggruppate al posto del cursore */
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.seg button {
+  background: transparent; border: 0; border-right: 1px solid var(--line);
+  color: var(--dim); font: inherit; font-size: 12px; padding: 6px 11px; cursor: pointer;
+  white-space: nowrap; transition: background .12s, color .12s;
+}
+.seg button:last-child { border-right: 0; }
+.seg button:hover { background: rgba(255,255,255,.04); color: var(--fg); }
+.seg button.on { background: var(--green, #4ade80); border-color: var(--green, #4ade80); color: #07240f; font-weight: 600; }
+@media (max-width: 720px) {
+  .seg button { padding: 6px 8px; font-size: 11px; }
+}

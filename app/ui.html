@@ -25,7 +25,11 @@
       </div>
       <div class="setting">Prospettiva
         <div class="toolbar" style="margin:0;gap:7px">
-          <input type="range" id="rngProspect" min="0" max="100" step="5" value="65" title="Quanto pesa quello che il giocatore farà rispetto a quello che ha già fatto">
+          <div class="seg" id="prospectSeg" role="group" aria-label="Prospettiva: quanto pesa il previsto rispetto al già fatto">
+            <button type="button" data-prospect="0.5" title="50% futuro · 50% già fatto — premia chi sta rendendo adesso: la fantamedia reale pesa quanto la proiezione">Ha fatto</button>
+            <button type="button" data-prospect="0.65" title="65% futuro · 35% già fatto — equilibrio: a metà stagione i risultati contano ancora, ma il contesto (ruolo, xG, storico) di più">Equilibrio</button>
+            <button type="button" data-prospect="0.78" title="78% futuro · 22% già fatto — premia chi promette: utile se credi che la classifica menta (nuovi arrivi, cambio di ruolo, tanti tiri senza gol)">Proiezione</button>
+          </div>
           <span class="val" id="valProspect">65% futuro</span>
         </div>
       </div>
@@ -272,6 +276,15 @@
       <p>In cima alla scheda <b>Giocatori</b> c'è la card <b>Indisponibili adesso</b>: prima i giocatori delle tue leghe, poi tutti gli altri squadra per squadra, con motivo e rientro previsto. E se in uno scambio ricevi uno che è fuori, la prima riga dei <i>contro</i> te lo dice con la sua prognosi — non serve accorgersene da soli guardando i numeri.</p>
       <p>Le due liste (Fantacalcio.it e PianetaFanta) vengono <b>unite</b>: chi c'è in entrambe ha la descrizione di uno e la data dell'altro. Chi è segnato <b>“Incerto”</b> o <b>“In Dubbio”</b> prende il bollino ambra <span class="out-badge dub small">IN DUBBIO</span> e una penalità più leggera (gioca al 60% del suo valore, perché il malanno c'è ma la giornata potrebbe giocarla).</p>
       <p>Le due cose restano <b>separate</b>, di proposito: l'indisponibilità è un fatto e corregge i punti attesi; la percentuale di titolarità è un pronostico sulla prossima giornata, quindi resta un'informazione in più e non entra nel modello, che proietta l'intera stagione. Lo stato che imposti tu a mano (✓ / ! / ✕) ha comunque la precedenza su tutto.</p>
+
+      <h3>Le tre prospettive (in alto)</h3>
+      <p>Ogni giocatore ha due stime: <b>quanto ha fatto</b> (la fantamedia reale, compressa verso l'attesa se ha giocato poco) e <b>quanto farà</b> (la proiezione: voto ancorato al ruolo e alla quotazione, bonus da storico e xG/xA, ritocco di forma). L'<b>Attesa</b> in tabella è la miscela delle due, e le tre scelte in alto dicono quanto pesa la seconda:</p>
+      <ul>
+        <li><b>Ha fatto (50%)</b> — metà e metà: chi sta rendendo adesso non viene penalizzato. Da usare se vuoi premiare i numeri veri e non le promesse.</li>
+        <li><b>Equilibrio (65%)</b> — il valore normale a stagione in corso: i risultati contano, ma il contesto conta di più.</li>
+        <li><b>Proiezione (78%)</b> — conta soprattutto quello che il modello si aspetta: serve quando sospetti che la classifica menta (nuovi arrivi, cambio di ruolo, tanti tiri e pochi gol).</li>
+      </ul>
+      <p>Non è un "più alto = meglio": la media dei punti non cambia (6,24 → 6,27 da 0% a 100%), cambia <b>chi sta in cima</b>. Sotto il 30% butti via il contesto, sopra l'85% smetti di guardare dodici giornate di dati veri. In tabella vedi le due metà separate: <b>FM</b> è il fatto, <b>Proiez.</b> il previsto — quando stanno a più di mezzo punto di distanza, quel giocatore è la domanda da farsi, qualunque prospettiva scegli.</p>
 
       <h3>La formazione consigliata della giornata</h3>
       <p>Nella scheda <b>Report</b>, in cima, c'è l'undici che schiererei adesso nel tuo modulo: per ogni ruolo scelgo i giocatori con più <b>punti attesi nella prossima giornata</b>, cioè <code>P(titolare) × fantamedia attesa + (1 − P(titolare)) × 6</code>. La differenza rispetto ai punti attesi della stagione è che qui conta solo la domenica: se le probabili formazioni danno un giocatore all'80% e un altro al 55%, gioca l'80%, anche se l'altro ha una fantamedia migliore. Chi risulta <b>indisponibile</b> non parte titolare (al massimo entra), chi è <b>in dubbio</b> ha mezzo posto, chi è <b>diffidato</b> paga un piccolo rischio di salto della giornata dopo.</p>

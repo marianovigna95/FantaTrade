@@ -2755,21 +2755,39 @@
     });
     $('#selRule').addEventListener('change', function (e) { state.tradeRule = e.target.value; });
 
-    // prospettiva: quanto pesa il futuro rispetto al già fatto
-    var rng = $('#rngProspect');
-    if (rng) {
-      var label = function () {
-        $('#valProspect').textContent = Math.round(state.prospect * 100) + '% futuro';
-        $('#rngProspect').title = 'Futuro ' + Math.round(state.prospect * 100) + '% · già fatto ' + Math.round(100 - state.prospect * 100) + '%';
+    // prospettiva: tre scelte invece di un cursore libero. Le percentuali sono quelle che
+    // uso nelle prove sui dati (50/65/78): fuori da questo intervallo il modello o ignora il
+    // campionato o lo butta via. Chi ha salvato un valore diverso resta sul più vicino, e la
+    // scritta accanto mostra la percentuale esatta.
+    var seg = $('#prospectSeg');
+    if (seg) {
+      var paintProspect = function () {
+        var btns = seg.querySelectorAll('button');
+        var best = null, bestD = 9;
+        Array.prototype.forEach.call(btns, function (b) {
+          var v = +b.getAttribute('data-prospect');
+          var d = Math.abs(v - state.prospect);
+          if (d < bestD - 1e-9) { bestD = d; best = b; }
+          b.classList.remove('on');
+        });
+        if (best) best.classList.add('on');
+        var pct = Math.round(state.prospect * 100);
+        var el = $('#valProspect');
+        if (el) el.textContent = pct + '% futuro' + (bestD > 0.001 ? ' · personalizzata' : '');
+        if (best) best.title = best.title.split(' \u00b7 fonte')[0];
       };
-      rng.addEventListener('input', function (e) {
-        state.prospect = clamp(+e.target.value / 100, 0, 1);
-        label();
+      seg.addEventListener('click', function (e) {
+        var b = e.target.closest('button[data-prospect]');
+        if (!b) return;
+        state.prospect = clamp(+b.getAttribute('data-prospect'), 0, 1);
+        paintProspect();
         renderAll();
         if ($('#tab-report').classList.contains('active')) { renderOffers(true); }
+        if ($('#tab-players').classList.contains('active')) renderPlayers();
+        toast('Prospettiva: ' + b.textContent.trim() + ' · ' + Math.round(state.prospect * 100) + '% previsto, ' + Math.round(100 - state.prospect * 100) + '% già fatto');
       });
-      rng.addEventListener('change', function () { if ($('#tab-players').classList.contains('active')) renderPlayers(); });
-      state._prospectLabel = label;
+      state._prospectLabel = paintProspect;
+      paintProspect();
     }
 
     // conguaglio in crediti: on/off
@@ -3130,7 +3148,7 @@
   $('#selRule').value = state.tradeRule;
   $('#btnCal').classList.toggle('on', state.useCal);
   $('#valHorizon').textContent = state.horizon + ' giornate';
-  if ($('#rngProspect')) $('#rngProspect').value = Math.round(state.prospect * 100);
+  if ($('#rngProspect')) $('#rngProspect').value = Math.round(state.prospect * 100);   // compatibilità
   if (state._prospectLabel) state._prospectLabel();
   if ($('#chkCredits')) $('#chkCredits').checked = state.useCredits;
   if ($('#chkFree')) $('#chkFree').checked = state.useFree;
