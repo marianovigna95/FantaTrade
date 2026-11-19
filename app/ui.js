@@ -121,13 +121,30 @@
 
   // crediti disponibili di una squadra: budget di lega meno quello che ha speso all'asta.
   // Man mano che si applicano scambi con conguaglio, il saldo si aggiorna.
+  function spentOf(t) {
+    var spent = 0;
+    Object.keys((t && t.paid) || {}).forEach(function (k) { spent += t.paid[k]; });
+    return spent;
+  }
+  // budget di lega: se non è noto lo deduco dalla squadra che ha speso di più (arrotondato
+  // per eccesso a 250, minimo 500). Prima qui c'era un 500 fisso di ripiego: nelle leghe
+  // importate dentro l'app, che arrivavano con budget 0, TUTTI i residui venivano calcolati
+  // su 500 e sembravano sbagliati (una lega da 1000 mostrava metà dei crediti).
+  function leagueBudget() {
+    var L = curLeague() || {}, b = +L.budget || 0;
+    if (b > 0) return b;
+    var mx = 0;
+    (L.teams || []).forEach(function (t) { mx = Math.max(mx, spentOf(t)); });
+    return mx ? Math.max(500, Math.ceil(mx / 250) * 250) : 500;
+  }
   function availCredits(t) {
     if (!t) return 0;
     if (typeof t.credits === 'number') return t.credits;
-    var spent = 0;
-    Object.keys(t.paid || {}).forEach(function (k) { spent += t.paid[k]; });
-    return Math.max(0, (curLeague().budget || 500) - spent);
+    return Math.max(0, leagueBudget() - spentOf(t));
   }
+  // speso più del budget: succede quando i crediti si sono mossi negli scambi, o quando
+  // i prezzi importati non sono quelli della lega. Meglio dirlo che mostrare 0 e basta.
+  function overBudget(t) { var b = leagueBudget(); return b > 0 && spentOf(t) > b + 1; }
   function setCredits(t, v) { if (t) t.credits = Math.max(0, Math.round(v)); }
 
   // tariffa crediti/punto stimata sui prezzi davvero pagati in questa lega
@@ -467,8 +484,31 @@
       Object.keys(L.paid || {}).forEach(function (k) { paid[+k] = L.paid[k]; });
       var teams = (L.teams || []).map(function (t) {
         var p2 = {};
-        Object.keys(t.paid || {}).forEach(function (k) { p2[+k] = t.paid[k]; });
-        return { name: t.name || 'Squadra', me: !!t.me, players: (t.players || []).filter(function (i) { return POOL[i]; }), paid: p2 };
+        var ids = [];
+        var fromSids = false;
+        if (t.sids && t.sids.length) {
+          // le rose salvate con gli id ufficiali: se il listone è stato riordinato, le
+          // posizioni non valgono più, gli id sì
+          var ps = {}, ok = 0;
+          t.sids.forEach(function (sid) {
+            var i2 = bySid[sid];
+            if (i2 != null && POOL[i2]) { ids.push(i2); ok++; }
+          });
+          if (ok >= t.sids.length - 2) {
+            fromSids = true;
+            Object.keys(t.paidSid || {}).forEach(function (sid) {
+              var i3 = bySid[+sid];
+              if (i3 != null) ps[i3] = t.paidSid[sid];
+            });
+          }
+        }
+        if (!fromSids) {
+          ids = (t.players || []).filter(function (i) { return POOL[i]; });
+          Object.keys(t.paid || {}).forEach(function (k) { p2[+k] = t.paid[k]; });
+        } else {
+          p2 = ps;
+        }
+        return { name: t.name || 'Squadra', me: !!t.me, players: ids, paid: p2 };
       });
       var hasMe = teams.some(function (t) { return t.me; });
       if (!hasMe && teams.length) teams[0].me = true;
@@ -2280,6 +2320,16 @@
 
 
   /* ---------- scheda Lega: piu' leghe, tutte le rose ---------- */
+  function squashName(s) {
+    return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  function spentOfLocal(t) {
+    var sp = 0;
+    Object.keys((t && t.paid) || {}).forEach(function (k) { sp += t.paid[k]; });
+    return sp;
+  }
+
   // export rose di Fantacalcio.it: righe "Squadra,id_giocatore,crediti"
   function parseRosterCsv(text, filename) {
     var teams = {}, order = [], unknown = 0, paidTotal = 0, modelTotal = 0;
@@ -2292,10 +2342,11 @@
       var idx = bySid[id];
       if (idx == null) { unknown++; return; }
       var price = parseInt(c[2], 10) || 0;
-      if (!teams[team]) { teams[team] = { name: team, players: [], paid: {} }; order.push(team); }
-      if (teams[team].players.indexOf(idx) < 0) teams[team].players.push(idx);
+      if (!teams[team]) { teams[team] = { name: team, players: [], sids: [], paid: {}, paidSid: {} }; order.push(team); }
+      if (teams[team].players.indexOf(idx) < 0) { teams[team].players.push(idx); teams[team].sids.push(id); }
       if (price) {
         teams[team].paid[idx] = price;
+        teams[team].paidSid[String(id)] = price;
         paidTotal += price;
         modelTotal += Math.max(1, (POOL[idx].qa || 1) * 1.5);
       }
@@ -2303,9 +2354,14 @@
     if (!order.length) return null;
     var k = modelTotal ? Math.max(1, Math.min(12, paidTotal / modelTotal)) : 1;
     var raw = filename.replace(/\.csv$/i, '').split(/_rosters|_fantaasta|_asta/)[0].replace(/[-_]+/g, ' ').replace(/['"]/g, '').trim();
+    // budget d'asta stimato: spesa mediana per squadra arrotondata a 250 (minimo 500),
+    // la stessa regola di import_fantacalcio.py. Si corregge a mano nella scheda Lega.
+    var spends = order.map(function (n) { return spentOfLocal(teams[n]); }).sort(function (a, b) { return a - b; });
+    var med = spends.length ? spends[Math.floor(spends.length / 2)] : 0;
+    var budget = Math.max(500, Math.ceil(med / 250) * 250);
     return {
       name: raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : 'Lega importata',
-      k: Math.round(k * 100) / 100, budget: 0, unknown: unknown,
+      k: Math.round(k * 100) / 100, budget: budget, unknown: unknown,
       teams: order.map(function (t) { return teams[t]; })
     };
   }
@@ -2314,6 +2370,25 @@
     var n = 0;
     ids.forEach(function (id) { if (POOL[id] && POOL[id].r === r) n++; });
     return n;
+  }
+
+  // chip dei crediti di una squadra + campo per dichiararli a mano. Dopo uno scambio i
+  // crediti viaggiano con i giocatori, quindi "budget meno la spesa" non è più il residuo
+  // vero: se il campo è compilato vince quello, altrimenti si calcola.
+  function credChip(t, i) {
+    var declared = typeof t.credits === 'number';
+    var over = overBudget(t) && !declared;
+    var why = declared
+      ? 'crediti dichiarati a mano: ' + t.credits + ' cr (svuota il campo per tornare al calcolo)'
+      : 'calcolato: budget ' + leagueBudget() + ' meno i ' + spentOf(t) + ' spesi' +
+        (over ? '. Ha speso più del budget: probabilmente ha incassato crediti in uno scambio — leggi il residuo vero su Fantacalcio e scrivilo qui' : '');
+    return '<span class="rc money' + (over ? ' short' : '') + '" title="' + esc('crediti disponibili per i conguagli · ' + why) + '">' +
+             availCredits(t) + ' cr' + (over ? ' ⚠' : '') +
+           '</span>' +
+           '<input class="teamname" style="width:58px" type="number" min="0" step="5" data-credits="' + i + '"' +
+             ' value="' + (declared ? t.credits : '') + '"' +
+             ' placeholder="' + availCredits(t) + '"' +
+             ' title="Crediti che restano davvero a ' + esc(t.name) + ': scrivili come li leggi su Fantacalcio.it. Vuoto = budget meno la spesa.">';
   }
 
   function renderLeague() {
@@ -2335,8 +2410,8 @@
         '<button class="ghost small" data-lg="csv">Importa rose CSV di Fantacalcio.it</button>' +
         '<input type="file" id="fileLeague" accept=".csv,text/csv" multiple style="display:none">' +
         '<span class="hint" style="margin:0;display:inline-flex;align-items:center;gap:6px">Crediti d\'asta per squadra' +
-          ' <input class="teamname" style="width:82px" type="number" min="0" step="50" data-budget="1" value="' + (L.budget || 500) + '"></span>' +
-        '<span class="hint" style="margin:0">Nei conguagli si muovono solo i crediti che restano: budget meno la spesa d\'asta.</span>' +
+          ' <input class="teamname" style="width:82px" type="number" min="0" step="50" data-budget="1" value="' + leagueBudget() + '"></span>' +
+        '<span class="hint" style="margin:0">Dopo gli scambi i crediti viaggiano con i giocatori: scrivi a fianco di ogni squadra i crediti che restano davvero (vuoto = budget meno la spesa).</span>' +
       '</div>' +
       '<p class="hint" style="margin:9px 0 0">Formato testo: una riga per squadra, <code>Nome: giocatore, giocatore, …</code>. Oppure importa l\'export CSV della lega (contiene gli id ufficiali: abbinamento esatto).</p>' +
     '</div>';
@@ -2355,7 +2430,8 @@
           '<span class="cnt">' + t.players.length + '</span>' +
         '</div>' +
         '<div class="rolebar">' + counts +
-          '<span class="rc money" title="crediti disponibili per i conguagli (budget meno la spesa d\'asta, più i conguagli già incassati)">' + availCredits(t) + ' cr</span></div>' +
+          credChip(t, i) +
+          '</div>' +
         '<div class="lga">' +
           (i === state.my ? '' : '<button class="small" data-act="opp" data-i="' + i + '">Analizza scambi</button>') +
           (i === state.my ? '' : '<button class="ghost small" data-act="me" data-i="' + i + '">È la mia squadra</button>') +
@@ -2759,6 +2835,19 @@
         renderAll();
       }
     });
+    // crediti residui dichiarati: si confermano su "change" (invio o uscita dal campo), non a
+    // ogni tasto, altrimenti il ridisegno della scheda fa saltare il cursore. Dopo uno scambio
+    // i crediti viaggiano con i giocatori, quindi "budget meno la spesa" non è più il residuo
+    // vero: campo vuoto = torna al calcolo automatico.
+    $('#leagueOut').addEventListener('change', function (e) {
+      if (!e.target.hasAttribute || !e.target.hasAttribute('data-credits')) return;
+      var ti = +e.target.getAttribute('data-credits'), tt = curLeague().teams[ti];
+      if (!tt) return;
+      var raw = e.target.value.trim();
+      if (raw === '') delete tt.credits;
+      else setCredits(tt, +raw || 0);
+      saveState(); renderLeague(); syncHeader();
+    });
     $('#leagueOut').addEventListener('input', function (e) {
       var tn = e.target.closest('[data-tname]');
       if (tn) { curLeague().teams[+tn.getAttribute('data-tname')].name = tn.value; saveState(); syncHeader(); return; }
@@ -2780,9 +2869,31 @@
           if (L) { imported.push(L); unknown += L.unknown; }
           if (--pending === 0) {
             if (!imported.length) { toast('Nessun giocatore riconosciuto nel CSV'); return; }
-            imported.forEach(function (L) { L.teams[0].me = true; state.leagues.push(L); });
+            imported.forEach(function (L) {
+              // se la lega esiste già (reimport dopo uno scambio), mi porto dietro quello che
+              // il CSV non contiene: crediti dichiarati a mano, budget, chi sono io
+              var old = null;
+              state.leagues.forEach(function (E) { if (squashName(E.name) === squashName(L.name)) old = E; });
+              if (old) {
+                if (+old.budget > 0) L.budget = old.budget;
+                var byName = {};
+                (old.teams || []).forEach(function (t) { byName[squashName(t.name)] = t; });
+                L.teams.forEach(function (t) {
+                  var o = byName[squashName(t.name)];
+                  if (!o) return;
+                  if (typeof o.credits === 'number') t.credits = o.credits;
+                  if (o.me) t.me = true;
+                });
+                var idxOld = state.leagues.indexOf(old);
+                if (idxOld >= 0) state.leagues.splice(idxOld, 1);
+              }
+              if (!L.teams.some(function (t) { return t.me; })) L.teams[0].me = true;
+              state.leagues.push(L);
+            });
             state.active = state.leagues.length - 1;
-            state.my = 0; state.opp = state.leagues[state.active].teams.length > 1 ? 1 : 0;
+            var meIdx = state.leagues[state.active].teams.findIndex(function (t) { return t.me; });
+            state.my = meIdx < 0 ? 0 : meIdx;
+            state.opp = state.leagues[state.active].teams.length > 1 ? (state.my === 0 ? 1 : 0) : 0;
             state.sel = { A: [], B: [] };
             syncTeamsCount(); renderAll();
             toast(imported.length + ' leghe importate' + (unknown ? ', ' + unknown + ' id ignorati' : ''));
