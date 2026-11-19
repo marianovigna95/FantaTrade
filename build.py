@@ -19,6 +19,7 @@ DIST = ROOT / "dist"
 data = json.load(open(APP / "data.json"))
 context = json.load(open(APP / "context.json"))
 leagues = json.load(open(APP / "leagues.json")) if (APP / "leagues.json").exists() else []
+changes = json.load(open(APP / "changes.json")) if (APP / "changes.json").exists() else None
 import datetime
 DATA_DATE = datetime.date.fromtimestamp((APP / "data.json").stat().st_mtime).strftime("%d/%m/%Y")
 css = (APP / "styles.css").read_text()
@@ -174,6 +175,7 @@ def page(head_extra: str) -> str:
 window.FANTATRADE_DATA = {json.dumps(data, ensure_ascii=False, separators=(',', ':'))};
 window.FANTATRADE_CTX = {json.dumps(context, ensure_ascii=False, separators=(',', ':'))};
 window.FANTATRADE_LEAGUES = {json.dumps(leagues, ensure_ascii=False, separators=(',', ':'))};
+window.FANTATRADE_CHANGES = {json.dumps(changes, ensure_ascii=False, separators=(',', ':'))};
 </script>
 <script>
 {model}

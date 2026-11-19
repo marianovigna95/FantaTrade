@@ -52,7 +52,7 @@ import unicodedata
 ROOT = pathlib.Path(__file__).resolve().parent
 DATA = ROOT / "app" / "data.json"
 BAK = ROOT / "app" / "data.extra-backup.json"
-ADV_FIELDS = ("xg", "npxg", "shots", "sot", "inj", "injDays", "injEpisodes", "advSource")
+ADV_FIELDS = ("xg", "npxg", "xa", "shots", "sot", "inj", "injDays", "injEpisodes", "advSource")
 
 
 def norm(s):
@@ -146,6 +146,7 @@ def merge(players, rows):
         put("npxg", num(pick(row, "npxg")))
         put("shots", num(pick(row, "shots", "tiri")))
         put("sot", num(pick(row, "sot", "tiri_in_porta")))
+        put("xa", num(pick(row, "xa", "xassist", "expected_assists")))
 
         inj = row.get("inj")
         if isinstance(inj, list):

@@ -290,6 +290,53 @@ def fetch_stats(slugs):
     return out
 
 
+def write_changes(old_players, new_players, gw):
+    """Riepilogo di cosa è cambiato rispetto all'aggiornamento precedente (letto dall'app)."""
+    import datetime
+    prev = {}
+    for p in old_players or []:
+        key = p.get("sid")
+        if key is not None:
+            prev[int(key)] = p
+    cur = {}
+    for p in new_players:
+        if p.get("sid") is not None:
+            cur[int(p["sid"])] = p
+
+    up, down, moved = [], [], []
+    for sid, p in cur.items():
+        q = prev.get(sid)
+        if not q:
+            continue
+        fm_old, fm_new = q.get("fm"), p.get("fm")
+        if fm_old and fm_new and (p.get("pres") or 0) >= 3:
+            d = round(fm_new - fm_old, 2)
+            item = {"n": p["n"], "t": p["t"], "old": round(fm_old, 2), "new": round(fm_new, 2), "d": d}
+            if abs(d) >= 0.05:
+                (up if d > 0 else down).append(item)
+        if q.get("t") and p.get("t") and q["t"] != p["t"]:
+            moved.append({"n": p["n"], "from": q["t"], "to": p["t"]})
+    up.sort(key=lambda x: -x["d"])
+    down.sort(key=lambda x: x["d"])
+    added = [{"n": p["n"], "t": p["t"]} for sid, p in cur.items() if sid not in prev]
+    gone = [{"n": p["n"], "t": p["t"]} for sid, p in prev.items() if sid not in cur]
+    prev_gw = max([int(p.get("pres") or 0) for p in old_players] or [0])
+    out = {
+        "date": datetime.date.today().isoformat(),
+        "gw": int(gw), "prevGw": prev_gw,
+        "players": len(new_players), "updated": sum(1 for sid in cur if sid in prev),
+        "up": up[:6], "down": down[:6], "moved": moved[:6],
+        "added": added[:6], "gone": gone[:6],
+        "nUp": len(up), "nDown": len(down),
+    }
+    try:
+        (ROOT / "app" / "changes.json").write_text(json.dumps(out, ensure_ascii=False, indent=0))
+        print(f"  riepilogo cambiamenti: {len(up)} in salita, {len(down)} in discesa, {len(moved)} cambi di squadra")
+    except OSError:
+        pass
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--min-price", type=float, default=6.0, help="prezzo atteso minimo per scaricare le statistiche")
@@ -359,6 +406,13 @@ def main():
         print(f"  ! solo {len(players)} giocatori ricostruiti: NON sovrascrivo app/data.json", file=sys.stderr)
         sys.exit(1)
     print(f"  database finale: {len(players)} giocatori ({senza_stats} senza statistiche stagionali)")
+
+    try:
+        old_players = json.loads((ROOT / "app" / "data.json").read_text())
+    except (OSError, ValueError):
+        old_players = []
+    gw_now = max((p["pres"] or 0) for p in players) if players else 11
+    write_changes(old_players, players, gw_now)
 
     (ROOT / "app" / "data.json").write_text(json.dumps(players, ensure_ascii=False, indent=0))
 

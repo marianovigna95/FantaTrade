@@ -123,6 +123,7 @@ def parse_understat(html):
             "squadra": club_of(p.get("team_title")),
             "npxg": round(float(p.get("npxG") or 0), 2),
             "xg": round(float(p.get("xG") or 0), 2),
+            "xa": round(float(p.get("xA") or 0), 2),
             "shots": int(float(p.get("shots") or 0)),
             "ass": int(float(p.get("assists") or 0)),
             "_min": minutes,
@@ -213,7 +214,7 @@ def parse_fotmob(text=None):
             "nome": r.get("ParticipantName"),
             "squadra": club_of(r.get("TeamName")),
             "xg": total(xg),
-            "xa": total(xa),          # non usato dal modello, resta nel report
+            "xa": total(xa),          # assist attesi: entrano nella proiezione dei bonus
             "shots": per90_per_game(sh),
             "sot": per90_per_game(sot),
             "_min": minutes,
