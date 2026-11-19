@@ -123,3 +123,28 @@ Fatto: fantatrade.html aggiornato.
 ! understat non disponibile: playersData non trovato nella pagina (sito cambiato o pagina di errore?)
 nessuna fonte ha funzionato, i dati restano quelli di prima.
   - understat: playersData non trovato nella pagina (sito cambiato o pagina di errore?)
+== 2026-11-19 15:47 refresh_data.py ==
+scritto fantatrade.html 424547 byte
+scritto dist/ (index.html, manifest.webmanifest, sw.js, icone, og.png, _headers, robots.txt)
+1/4 listone ufficiale fantacalcio.it…
+  listone ufficiale fantacalcio.it: 603 giocatori
+2/4 indice statistiche…
+  elenco statistiche: 2627 giocatori
+3/4 abbinamento…
+  abbinamento nomi: 575/603
+4/4 statistiche…
+  statistiche scaricate: 567
+  secondo tentativo su 37 candidati alternativi…
+  statistiche scaricate: 34
+  recuperati 15 giocatori
+  database finale: 603 giocatori (28 senza statistiche stagionali)
+  giornate giocate impostate a 11
+Fatto: fantatrade.html aggiornato.
+== 2026-11-19 15:48 fetch_extra.py ==
+scritto fantatrade.html 440879 byte
+scritto dist/ (index.html, manifest.webmanifest, sw.js, icone, og.png, _headers, robots.txt)
+! understat non disponibile: playersData non trovato nella pagina (sito cambiato o pagina di errore?)
+fonte fotmob: 333 giocatori con almeno 180 minuti · abbinati 330 · non riconosciuti 3
+  non riconosciuti (primi 10): Valde (Fiorentina); Romano Floriani (Lazio); Pote (Fiorentina)
+aggiornati 330 giocatori · campi: shots=309, sot=260, xg=330
+ricompilo fantatrade.html …
