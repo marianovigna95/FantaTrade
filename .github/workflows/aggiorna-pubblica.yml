@@ -20,6 +20,7 @@ on:
       - "refresh_data.py"
       - "fetch_extra.py"
       - "fetch_avail.py"
+      - "fetch_consensus.py"
       - "import_extra.py"
       - ".github/workflows/**"
 
@@ -75,6 +76,15 @@ jobs:
           echo "== $(date -u +%F\ %H:%M) fetch_avail.py ==" >> aggiorna_log.txt
           python3 fetch_avail.py --no-build 2>&1 | tee -a aggiorna_log.txt \
             || echo "::warning::fetch_avail.py non riuscito, tengo gli indisponibili precedenti"
+
+      # Fantamedia secondo tre testate (FantaPazz, Gazzetta, Corriere): serve al "consenso"
+      # e a scoprire quando le fonti non sono d'accordo sul voto di un giocatore.
+      - name: Consenso delle testate (fantamedia)
+        run: |
+          set -o pipefail
+          echo "== $(date -u +%F\ %H:%M) fetch_consensus.py ==" >> aggiorna_log.txt
+          python3 fetch_consensus.py --no-build 2>&1 | tee -a aggiorna_log.txt \
+            || echo "::warning::fetch_consensus.py non riuscito, tengo le fantamedie delle testate precedenti"
 
       - name: Ricompila
         run: python3 build.py
