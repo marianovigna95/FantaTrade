@@ -28,3 +28,98 @@ IndentationError: unexpected indent
 ! understat non disponibile: playersData non trovato nella pagina (sito cambiato o pagina di errore?)
 nessuna fonte ha funzionato, i dati restano quelli di prima.
   - understat: playersData non trovato nella pagina (sito cambiato o pagina di errore?)
+== 2026-11-19 15:25 refresh_data.py ==
+  ! errore su https://fantacalcio.devi/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devg/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devo/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devc/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.deva/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devt/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devo/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devr/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devi/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devy/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devi/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devi/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devd/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devl/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devz/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devg/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devi/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devo/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devc/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.deva/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devt/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devo/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devr/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devi/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devo/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devj/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devs/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.deve/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devp/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.dev-/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devm/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.deva/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devr/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devi/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devt/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devn/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.deve/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devz/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devg/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devi/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devo/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.deva/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devc/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devo/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devt/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devr/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devi/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devb/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devo/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devg/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.deva/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devg/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devi/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devo/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devc/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.deva/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devt/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devo/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devr/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devi/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devr/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devo/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devb/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.deve/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devr/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devt/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.dev-/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.deva/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devs/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devn/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devc/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devh/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.deve/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+  ! errore su https://fantacalcio.devz/stagione/2026-27/statistiche: <urlopen error [Errno -2] Name or service not known>
+scritto fantatrade.html 423752 byte
+scritto dist/ (index.html, manifest.webmanifest, sw.js, icone, og.png, _headers, robots.txt)
+1/4 listone ufficiale fantacalcio.it…
+  listone ufficiale fantacalcio.it: 603 giocatori
+2/4 indice statistiche…
+  elenco statistiche: 2627 giocatori
+3/4 abbinamento…
+  abbinamento nomi: 575/603
+4/4 statistiche…
+  statistiche scaricate: 564
+  secondo tentativo su 111 candidati alternativi…
+  statistiche scaricate: 54
+  recuperati 15 giocatori
+  database finale: 603 giocatori (32 senza statistiche stagionali)
+  giornate giocate impostate a 11
+Fatto: fantatrade.html aggiornato.
+== 2026-11-19 15:28 fetch_extra.py ==
+! understat non disponibile: playersData non trovato nella pagina (sito cambiato o pagina di errore?)
+nessuna fonte ha funzionato, i dati restano quelli di prima.
+  - understat: playersData non trovato nella pagina (sito cambiato o pagina di errore?)
