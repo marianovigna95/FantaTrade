@@ -19,8 +19,10 @@ DIST = ROOT / "dist"
 data = json.load(open(APP / "data.json"))
 context = json.load(open(APP / "context.json"))
 leagues = json.load(open(APP / "leagues.json")) if (APP / "leagues.json").exists() else []
+import datetime
+DATA_DATE = datetime.date.fromtimestamp((APP / "data.json").stat().st_mtime).strftime("%d/%m/%Y")
 css = (APP / "styles.css").read_text()
-body = (APP / "ui.html").read_text()
+body = (APP / "ui.html").read_text().replace("__DATA_DATE__", DATA_DATE)
 model = (APP / "model.js").read_text()
 ui = (APP / "ui.js").read_text()
 

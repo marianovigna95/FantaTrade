@@ -184,7 +184,7 @@ def match_names(quot, dev):
 
     def best_for(p):
         if p["n"] in MANUAL_SLUGS:
-            return MANUAL_SLUGS[p["n"]]
+            return [MANUAL_SLUGS[p["n"]]]          # lista: prima era una stringa, e veniva iterata carattere per carattere
         toks = norm(p["n"]).split()
         if not toks:
             return None
@@ -219,8 +219,16 @@ def match_names(quot, dev):
         # tengo i primi candidati: se il primo non ha statistiche provo i successivi
         return [d["slug"] for d in ordered[:3] if score(d) >= 10]
 
+    def valid(seq):
+        """tiene solo slug veri: '/giocatori/nome-cognome'. Serve a non inseguire 404 assurdi."""
+        out = []
+        for sl in seq if isinstance(seq, (list, tuple)) else [seq]:
+            if isinstance(sl, str) and re.fullmatch(r"/[A-Za-z0-9][A-Za-z0-9\-/]*", sl) and sl not in out:
+                out.append(sl)
+        return out
+
     for p in quot:
-        slugs = best_for(p) or []
+        slugs = valid(best_for(p) or [])
         p["slugs"] = slugs
         p["slug"] = slugs[0] if slugs else None
     hit = sum(1 for p in quot if p["slug"])
@@ -271,6 +279,8 @@ def parse_stats(html):
 
 def fetch_stats(slugs):
     def one(slug):
+        if not re.fullmatch(r"/[A-Za-z0-9][A-Za-z0-9\-/]*", str(slug)):
+            return slug, {}                     # slug non valido: non spreco una richiesta
         return slug, parse_stats(get(f"{DEV}{slug}/stagione/{SEASON}/statistiche"))
     out = {}
     with ThreadPoolExecutor(max_workers=8) as ex:
