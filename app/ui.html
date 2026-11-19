@@ -121,6 +121,7 @@
 
   <!-- ============ REPORT ============ -->
   <section class="tab" id="tab-report">
+    <div id="changesCard"></div>
     <div id="reportTop"></div>
 
     <div class="panel" style="margin:16px 0 12px">
@@ -164,6 +165,20 @@
 
   <!-- ============ GIOCATORI ============ -->
   <section class="tab" id="tab-players">
+    <div class="panel cmp" id="cmpPanel">
+      <div class="toolbar" style="margin:0 0 10px">
+        <h2 style="margin:0">Confronto diretto</h2>
+        <span class="grow"></span>
+        <button class="ghost small" id="cmpClear" style="display:none">azzera</button>
+      </div>
+      <div class="cmp-pick">
+        <input id="cmpA" list="cmpList" placeholder="Primo giocatore…" autocomplete="off">
+        <span class="cmp-vs">vs</span>
+        <input id="cmpB" list="cmpList" placeholder="Secondo giocatore…" autocomplete="off">
+        <datalist id="cmpList"></datalist>
+      </div>
+      <div id="cmpOut"><p class="hint" style="margin:0">Scrivi due nomi e vedi chi conviene, riga per riga: punti attesi, titolarità, tiri, assist, fragilità, calendario.</p></div>
+    </div>
     <div class="toolbar">
       <div class="search" style="margin:0;flex:1;max-width:340px">
         <input id="dataQuery" placeholder="Filtra per nome o squadra…" autocomplete="off">
@@ -288,8 +303,15 @@
       <h3>Dati avanzati: xG e storico infortuni</h3>
       <p>Due cose che il listone non ha e che spostano le previsioni: <b>quanto tira</b> un giocatore e <b>quanto si rompe</b>. FantaTrade li accetta da fuori e li usa <i>solo se ci sono</i>:</p>
       <p>● <b>xG (gol attesi)</b>: arrivano <b>da soli</b>, una volta a settimana, da Understat o — se Understat non risponde — da FotMob (dati Opta, stessi campi, nessuna chiave). Il bonus proiettato diventa un mix tra gol fatti e gol attesi (peso 0,45, ridotto per chi ha pochi minuti): chi ha segnato 8 gol con 9,7 di xG viene alzato, chi ha segnato 9 con 5,5 viene frenato. Nella scheda Giocatori compaiono le colonne <b>xG/90</b> e <b>Gol−xG</b>.<br>
+         ● anche gli <b>assist attesi (xA)</b> entrano nella proiezione: chi ha 2 assist ma 1,0 di xA viene frenato, chi ha 0 assist con 2,2 di xA viene considerato. Peso 0,45, come per i gol. <br>
          ● <b>storico infortuni</b>: giorni fuori nelle ultime due stagioni → percentuale di giornate a rischio. Può solo <i>abbassare</i> la disponibilità, mai alzarla. Compare la colonna <b>Rischio inf.</b> e, sopra il 15%, una riga nei <i>contro</i> dello scambio.</p>
       <p>L'<b>xG si aggiorna da solo</b> insieme al resto dei dati (una volta a settimana): <code>fetch_extra.py</code> prova le fonti in ordine (Understat → FotMob → CSV di FBref), abbina i nomi per cognome e squadra, e segnala in <code>extra_report.txt</code> chi non ha riconosciuto — senza indovinare. Se una settimana <i>tutte</i> le fonti sono giù, i numeri dell'ultima settimana buona restano al loro posto. Il <b>calendario infortuni</b> è l'unico pezzo che si importa a mano, due volte l'anno (<code>python3 import_extra.py mio_file.csv</code>, formato in <code>extra_template.csv</code>: <code>sid</code> oppure nome + squadra), perché Transfermarkt blocca gli script e nessuna fonte libera dà i giorni fuori via API. Ambigui e non trovati si saltano e si stampano: meglio un buco che un dato attribuito al giocatore sbagliato. Senza dati importati l'app funziona esattamente come prima — nessun numero inventato.</p>
+
+      <h3>Confronto diretto tra due giocatori</h3>
+      <p>Nella scheda <b>Giocatori</b>, in alto, ci sono due caselle: scrivi due nomi e vedi il confronto riga per riga — <b>punti attesi a giornata</b>, minuti, profilo (titolare / ballottaggio / dietro a chi), tiri attesi, assist, fragilità, calendario. Le righe migliori sono evidenziate e in fondo c'è il verdetto scritto in chiaro: <i>"Meglio Malen: +0,9 pt/g attesi. Ma è in ballottaggio con X: se perde il posto scende verso Y."</i> Serve per decidere un dubbio secco, senza passare per uno scambio.</p>
+
+      <h3>Cosa è cambiato dall'ultimo aggiornamento</h3>
+      <p>In cima alla scheda <b>Report</b> c'è il riepilogo dell'ultimo aggiornamento dei dati: quanti giocatori sono saliti e scesi di fantamedia (con il prima e il dopo), chi ha cambiato squadra, chi è entrato o uscito dal listone. Così se il valore di un giocatore è cambiato dall'ultima volta lo vedi subito, senza ricordarti i numeri a memoria. Se non c'è uno storico precedente, il riquadro non compare.</p>
 
       <h3>Titolarità, ballottaggi e fragilità</h3>
       <p>Un giocatore non vale solo per quello che ha fatto: conta <b>se gioca</b>, <b>chi gli contende il posto</b> e <b>quanto è stato disponibile</b>. L'app lo ricava dai dati che ha e lo dice in chiaro, senza inventare probabilità:</p>
@@ -328,7 +350,7 @@
       </ul>
 
       <h3>Fonti dei dati</h3>
-      <p><b>Listone e quotazioni</b>: listone ufficiale 2026/27 di Fantacalcio.it (603 giocatori, con quotazione iniziale QI, quotazione attuale QA e FVM). <b>Statistiche</b>: fantacalcio.dev, stagione 2026/27 (presenze, minuti, gol, assist, media voto, fantamedia), con le ultime 6 partite e lo storico delle fantamedie delle stagioni precedenti. <b>Calendario</b>: Serie A 2026/27 dalla 12ª giornata, con gol fatti/subiti per stimare la forza delle squadre. <b>xG e tiri</b>: Understat e FotMob (Serie A 2026/27), aggiornati in automatico ogni settimana. Dati aggiornati al __DATA_DATE__.</p>
+      <p><b>Listone e quotazioni</b>: listone ufficiale 2026/27 di Fantacalcio.it (603 giocatori, con quotazione iniziale QI, quotazione attuale QA e FVM). <b>Statistiche</b>: fantacalcio.dev, stagione 2026/27 (presenze, minuti, gol, assist, media voto, fantamedia), con le ultime 6 partite e lo storico delle fantamedie delle stagioni precedenti. <b>Calendario</b>: Serie A 2026/27 dalla 12ª giornata, con gol fatti/subiti per stimare la forza delle squadre. <b>xG, xA e tiri</b>: Understat e FotMob (Serie A 2026/27), aggiornati in automatico ogni settimana. Dati aggiornati al __DATA_DATE__.</p>
       <p style="color:var(--dim);font-size:12.5px">Prototipo: i dati sono incorporati nel file e non si aggiornano da soli (lo script <code>refresh_data.py</code> li riscarica e ricompila la pagina in un comando).</p>
     </div>
   </section>

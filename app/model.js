@@ -33,6 +33,7 @@
     STARTER_MS: 0.72,              // quota minuti da "titolare"
     STARTER_AVAIL: 0.7,            // presenza minima (giornate giocate / giornate) da titolare fisso
     W_XG: 0.45,                    // quanto pesano i gol attesi (xG) rispetto ai gol fatti, se disponibili
+    W_XA: 0.45,                    // idem per gli assist attesi (xA)
     BONUS_GOAL: 3,                 // bonus fantacalcio per gol
     BONUS_ASSIST: 1,               // bonus per assist
     K_INJ: 0.35,                   // quanto pesa lo storico infortuni nella probabilita' di giocare
@@ -149,6 +150,10 @@
       xg: xg, penal: p.xg != null && p.npxg != null ? num(p.xg) - num(p.npxg) : null,
       shots: shots,
       sot: p.sot != null ? num(p.sot) : null,
+      xa: p.xa != null ? num(p.xa) : null,
+      xa90: (p.xa != null && m90 > 0) ? num(p.xa) / m90 : null,
+      // assist fatti meno assist attesi: > 0 sta servendo piu' di quanto crea
+      assVsXa: (p.ass != null && p.xa != null) ? num(p.ass) - num(p.xa) : null,
       xg90: m90 > 0 ? xg / m90 : null,
       shots90: (shots != null && m90 > 0) ? shots / m90 : null,
       // gol fatti meno gol attesi: > 0 sta finalizzando sopra le aspettative
@@ -156,15 +161,20 @@
     };
   }
 
-  // bonus per partita giocata dedotto dai tiri: gol attesi (xG) + assist attuali
+  // bonus per partita giocata dedotto dai tiri: gol attesi (xG) + assist attesi (xA)
   function xgBonusPerMatch(p) {
     var a = advStats(p);
     if (!a || !a.xg90) return null;
     var m90 = num(p.min) / 90;
     if (!(m90 > 0)) return null;
-    var ass90 = num(p.ass) / m90;
     var ms = minuteShare(p);
-    return (a.xg90 * CFG.BONUS_GOAL + ass90 * CFG.BONUS_ASSIST) * ms;
+    // piu' minuti giocati, piu' xG/xA sono credibili
+    var conf = num(p.min) / (num(p.min) + CFG.MAX_MIN);
+    var w = 0.5 + 0.5 * Math.min(1, conf * 2);
+    var ass90 = num(p.ass) / m90;
+    var assEff = ass90;
+    if (a.xa90 != null) assEff = (1 - CFG.W_XA * w) * ass90 + (CFG.W_XA * w) * a.xa90;
+    return (a.xg90 * CFG.BONUS_GOAL + assEff * CFG.BONUS_ASSIST) * ms;
   }
 
   function projectedFm(p) {

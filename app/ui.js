@@ -48,6 +48,7 @@
     depth: 2,
     dataRole: 'ALL',
     dataQuery: '',
+    cmpA: '', cmpB: '',
     dataSort: { key: 'ev', dir: -1 },
     prospect: 0.65,     // quanto pesa il "farà" rispetto al "ha fatto" (0..1)
     useCredits: true,   // conguaglio in crediti per pareggiare gli scambi
@@ -648,6 +649,9 @@
       out.push(Math.abs(a.finishing) >= 0.01
         ? Math.round(POOL[id].gol || 0) + ' gol con ' + fmt(a.xg, 1) + ' di xG'
         : '');
+    }
+    if (a && a.assVsXa != null && Math.abs(a.assVsXa) >= 0.8) {
+      out.push(Math.round(POOL[id].ass || 0) + ' assist con ' + fmt(a.xa, 1) + ' di xA');
     }
     var inj = M.injuryProfile(POOL[id]);
     if (inj && inj.days > 0) out.push(inj.days + ' giorni fuori in 2 stagioni (' + inj.episodes + ' episodi)');
@@ -1804,6 +1808,163 @@
   }
 
   /* ---------- render globale ---------- */
+  // ---------------------------------------------------------------- confronto diretto
+  function findPlayer(q) {
+    var s = norm(q);
+    if (!s) return -1;
+    var exact = -1, byName = -1, part = -1;
+    for (var i = 0; i < POOL.length; i++) {
+      var n = norm(POOL[i].n), full = norm(POOL[i].n + ' ' + POOL[i].t);
+      if (full === s) return i;
+      if (n === s && byName < 0) byName = i;
+      if (part < 0 && (n.indexOf(s) === 0 || full.indexOf(s) >= 0)) part = i;
+    }
+    return byName >= 0 ? byName : (exact >= 0 ? exact : part);
+  }
+
+  function cmpNice(p) { return p.n + ' (' + p.t + ')'; }
+
+  function renderCompare() {
+    var out = $('#cmpOut');
+    if (!out) return;
+    var i = findPlayer(state.cmpA), j = findPlayer(state.cmpB);
+    $('#cmpClear').style.display = (state.cmpA || state.cmpB) ? '' : 'none';
+    if (i < 0 || j < 0 || i === j) {
+      out.innerHTML = '<p class="hint" style="margin:0">Scrivi due nomi e vedi chi conviene, riga per riga: ' +
+        'punti attesi, titolarità, tiri, assist, fragilità, calendario.</p>';
+      return;
+    }
+    var A = POOL[i], B = POOL[j];
+    var aa = M.advStats(A) || {}, ab = M.advStats(B) || {};
+    var sa = M.starterProfile(POOL, i) || {}, sb = M.starterProfile(POOL, j) || {};
+    var injA = M.injuryProfile(A), injB = M.injuryProfile(B);
+    var pa = M.projectedFm(A), pb = M.projectedFm(B);
+    var msA = M.minuteShare(A), msB = M.minuteShare(B);
+    var calA = state.useCal && CTX ? calPct(A.t, A.r) : null;
+    var calB = state.useCal && CTX ? calPct(B.t, B.r) : null;
+
+    function numFmt(v) { return v == null || !isFinite(v) ? '–' : fmt(v, 2); }
+    function intFmt(v) { return v == null || !isFinite(v) ? '–' : String(Math.round(v)); }
+    function pctFmt(v) { return v == null || !isFinite(v) ? '–' : Math.round(v * 100) + '%'; }
+    function signedFmt(v) {
+      return v == null || !isFinite(v) ? '–' : (v > 0 ? '+' : '') + fmt(v, 2);
+    }
+
+    var rows = [];
+    function row(label, va, vb, dir, f) {      // dir: 1 = più alto è meglio, -1 = più basso, 0 = neutro
+      var better = 0;
+      if (dir && typeof va === 'number' && typeof vb === 'number' && va !== vb && isFinite(va) && isFinite(vb)) {
+        better = (dir > 0 ? va > vb : va < vb) ? 1 : 2;
+      }
+      rows.push({ label: label, a: f ? f(va) : (va == null ? '–' : String(va)),
+        b: f ? f(vb) : (vb == null ? '–' : String(vb)), better: better });
+    }
+    row('Ruolo', A.r, B.r, 0);
+    row('Presenze', A.pres || 0, B.pres || 0, 1, intFmt);
+    row('Minuti giocati', msA, msB, 1, pctFmt);
+    row('Fantamedia', A.fm || null, B.fm || null, 1, numFmt);
+    row('Punti attesi a giornata', pa, pb, 1, numFmt);
+    row('Profilo', sa.label || '–', sb.label || '–', 0);
+    if (sa.rival || sb.rival) {
+      row('Ballottaggio con', sa.rival ? POOL[sa.rival.id].n : '–', sb.rival ? POOL[sb.rival.id].n : '–', 0);
+    }
+    if (aa.xg90 != null || ab.xg90 != null) {
+      row('xG/90 (gol attesi)', aa.xg90, ab.xg90, 1, numFmt);
+      row('Gol − xG', aa.finishing, ab.finishing, 0, signedFmt);
+    }
+    if (aa.xa90 != null || ab.xa90 != null) {
+      row('xA/90 (assist attesi)', aa.xa90, ab.xa90, 1, numFmt);
+      row('Assist', A.ass, B.ass, 1, intFmt);
+    }
+    row('Giornate saltate', sa.missed || 0, sb.missed || 0, -1, intFmt);
+    if (calA != null || calB != null) row('Calendario (più alto = più facile)', calA, calB, 1, pctFmt);
+
+    var cls = function (b) { return b === 1 ? 'win' : b === 2 ? 'lose' : ''; };
+    out.innerHTML = '<table class="cmp-tbl"><thead><tr><th></th>' +
+      '<th>' + esc(A.n) + '<span class="sub2">' + esc(A.t) + '</span></th>' +
+      '<th>' + esc(B.n) + '<span class="sub2">' + esc(B.t) + '</span></th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        return '<tr><td class="lab">' + esc(r.label) + '</td>' +
+          '<td class="' + cls(r.better === 1 ? 1 : 0) + '">' + esc(String(r.a)) + '</td>' +
+          '<td class="' + cls(r.better === 2 ? 1 : 0) + '">' + esc(String(r.b)) + '</td></tr>';
+      }).join('') + '</tbody></table>' + '<p class="cmp-verdict">' + verdict(i, j, pa, pb) + '</p>';
+  }
+
+  function verdict(i, j, pa, pb) {
+    var A = POOL[i], B = POOL[j];
+    var d = pa - pb, win = d >= 0 ? A : B, lose = d >= 0 ? B : A, wIdx = d >= 0 ? i : j;
+    var sp = M.starterProfile(POOL, wIdx) || {};
+    var parts = [];
+    if (Math.abs(d) < 0.15) {
+      parts.push('<b>Praticamente pari</b>: ' + esc(A.n) + ' e ' + esc(B.n) + ' stanno entro ' + fmt(0.15, 2) +
+        ' pt/g (' + fmt(pa) + ' contro ' + fmt(pb) + '). Decide il ruolo, il cartellino o cosa ti serve in rosa, non il numero.');
+    } else {
+      parts.push('<b>Meglio ' + esc(win.n) + '</b>: ' + (d >= 0 ? '+' : '−') + fmt(Math.abs(d)) + ' pt/g attesi (' +
+        fmt(Math.max(pa, pb)) + ' contro ' + fmt(Math.min(pa, pb)) + ').');
+      if (sp.rival) {
+        parts.push('Attenzione: è in ballottaggio con ' + esc(POOL[sp.rival.id].n) +
+          ', se perde il posto il suo valore scende verso ' + fmt(M.projectedFm(POOL[sp.rival.id])) + '.');
+      } else if (sp.label) {
+        parts.push('Profilo: ' + esc(sp.label) + '.');
+      }
+    }
+    var aw = M.advStats(win) || {}, al = M.advStats(lose) || {};
+    if (aw.xg90 != null && al.xg90 != null && Math.abs(aw.xg90 - al.xg90) >= 0.15) {
+      parts.push('Tira di più: xG/90 ' + fmt(aw.xg90) + ' contro ' + fmt(al.xg90) + '.');
+    }
+    if (aw.xa90 != null && al.xa90 != null && Math.abs(aw.xa90 - al.xa90) >= 0.12) {
+      if (aw.xa90 > al.xa90) {
+        parts.push('Serve anche più assist attesi: xA/90 ' + fmt(aw.xa90) + ' contro ' + fmt(al.xa90) + '.');
+      } else {
+        parts.push('Però ' + esc(lose.n) + ' crea più assist attesi: xA/90 ' + fmt(al.xa90) + ' contro ' + fmt(aw.xa90) + '.');
+      }
+    }
+    var cp = M.starterProfile(POOL, d >= 0 ? j : i) || {};
+    if (cp.missed >= 3 && (sp.missed || 0) < cp.missed) {
+      parts.push(esc(lose.n) + ' ha già saltato ' + cp.missed + ' giornate.');
+    }
+    return parts.join(' ');
+  }
+
+  // ---------------------------------------------------------------- cosa è cambiato
+  function renderChanges() {
+    var box = $('#changesCard');
+    if (!box) return;
+    var c = window.FANTATRADE_CHANGES;
+    if (!c || (!(c.up || []).length && !(c.down || []).length && !(c.moved || []).length &&
+      !(c.added || []).length && !(c.gone || []).length)) {
+      box.innerHTML = '';
+      return;
+    }
+    function list(arr, render) {
+      if (!arr || !arr.length) return '<li class="dim">niente da segnalare</li>';
+      return arr.map(render).join('');
+    }
+    function delta(x) {
+      var s = (x.d > 0 ? '+' : '−') + fmt(Math.abs(x.d), 2);
+      return '<li><b class="' + (x.d > 0 ? 'pos' : 'neg') + '">' + s + '</b> ' + esc(x.n) +
+        ' <span class="dim">' + esc(x.t) + ' · ' + fmt(x.old, 2) + ' → ' + fmt(x.new, 2) + '</span></li>';
+    }
+    var gw = c.gw && c.prevGw && c.gw !== c.prevGw ? ' · giornata ' + c.prevGw + ' → ' + c.gw : '';
+    box.innerHTML = '<div class="panel changes">' +
+      '<div class="toolbar" style="margin:0 0 10px"><h2 style="margin:0">Cosa è cambiato</h2><span class="grow"></span>' +
+      '<span class="hint" style="margin:0">dati del ' + esc((c.date || '').split('-').reverse().join('/')) +
+      ' · ' + (c.updated || 0) + ' giocatori riconfrontati' + gw + '</span></div>' +
+      '<div class="changes-grid">' +
+      '<div><h4>In salita <span class="dim">(' + (c.nUp || 0) + ')</span></h4><ul>' + list(c.up, delta) + '</ul></div>' +
+      '<div><h4>In discesa <span class="dim">(' + (c.nDown || 0) + ')</span></h4><ul>' + list(c.down, delta) + '</ul></div>' +
+      '<div><h4>Cambi di squadra</h4><ul>' + list(c.moved, function (x) {
+        return '<li>' + esc(x.n) + ' <span class="dim">' + esc(x.from) + ' → ' + esc(x.to) + '</span></li>';
+      }) + '</ul>' +
+      ((c.added || []).length ? '<h4 style="margin-top:10px">Entrati nel listone</h4><ul>' + list(c.added, function (x) {
+        return '<li>' + esc(x.n) + ' <span class="dim">' + esc(x.t) + '</span></li>';
+      }) + '</ul>' : '') +
+      ((c.gone || []).length ? '<h4 style="margin-top:10px">Usciti dal listone</h4><ul>' + list(c.gone, function (x) {
+        return '<li>' + esc(x.n) + ' <span class="dim">' + esc(x.t) + '</span></li>';
+      }) + '</ul>' : '') +
+      '</div></div>';
+  }
+
   function renderAll() {
     (function () {
       var f = advPresence();
@@ -1818,7 +1979,8 @@
     saveState();
     renderRoster('A'); renderRoster('B');
     renderSummary(); renderVerdict();
-    if ($('#tab-players').classList.contains('active')) renderPlayers();
+    if ($('#tab-players').classList.contains('active')) { renderPlayers(); renderCompare(); }
+    renderChanges();
     if ($('#tab-league').classList.contains('active')) renderLeague();
     if ($('#tab-report').classList.contains('active')) { renderReport(); renderOffers(false); }
     syncHeader();
@@ -2509,6 +2671,28 @@
       });
     });
     $('#dataQuery').addEventListener('input', function (e) { state.dataQuery = e.target.value; renderPlayers(); });
+    (function () {
+      var list = $('#cmpList');
+      if (list) {
+        list.innerHTML = POOL.map(function (p) {
+          return '<option value="' + esc(cmpNice(p)) + '"></option>';
+        }).join('');
+      }
+      ['#cmpA', '#cmpB'].forEach(function (sel) {
+        var el = $(sel);
+        if (!el) return;
+        el.addEventListener('input', function (e) {
+          state[sel === '#cmpA' ? 'cmpA' : 'cmpB'] = e.target.value;
+          renderCompare();
+        });
+      });
+      var clr = $('#cmpClear');
+      if (clr) clr.addEventListener('click', function () {
+        state.cmpA = ''; state.cmpB = '';
+        $('#cmpA').value = ''; $('#cmpB').value = '';
+        renderCompare();
+      });
+    })();
     $$('#dataTable th').forEach(function (th) {
       th.addEventListener('click', function () {
         var k = th.getAttribute('data-key');

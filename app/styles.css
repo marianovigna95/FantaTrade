@@ -319,3 +319,33 @@ table.data .nm{font-weight:600}
 /* colonne che esistono solo con i dati avanzati importati */
 body:not(.has-adv) .col-adv{display:none}
 body:not(.has-inj) .col-inj{display:none}
+
+/* ============ confronto diretto tra due giocatori ============ */
+.cmp{margin-bottom:14px}
+.cmp-pick{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.cmp-pick input{flex:1 1 220px;min-width:0;background:var(--bg);border:1px solid var(--line);
+  border-radius:9px;padding:9px 11px;color:var(--fg);font-size:13.5px}
+.cmp-pick input:focus{outline:none;border-color:var(--accent)}
+.cmp-vs{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+.cmp-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.cmp-tbl th,.cmp-tbl td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.cmp-tbl th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.cmp-tbl th:first-child,.cmp-tbl td.lab{text-align:left}
+.cmp-tbl td.lab{color:var(--muted);font-weight:500}
+.cmp-tbl .sub2{display:block;font-size:11px;color:var(--dim);text-transform:none;letter-spacing:0;font-weight:400}
+.cmp-tbl td.win{color:var(--green);font-weight:700;background:rgba(47,208,123,.07)}
+.cmp-tbl tr:last-child td{border-bottom:none}
+.cmp-verdict{margin:12px 0 0;font-size:13px;line-height:1.6;color:var(--muted);
+  border-left:2px solid var(--accent);padding-left:11px}
+.cmp-verdict b{color:var(--fg)}
+@media (max-width:720px){ .cmp-tbl th,.cmp-tbl td{padding:6px 7px;font-size:12.3px} }
+
+/* ============ "cosa è cambiato" ============ */
+.changes{margin-bottom:14px}
+.changes-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px 20px}
+.changes-grid h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.changes-grid h4 .dim{text-transform:none;letter-spacing:0;font-weight:400}
+.changes-grid ul{list-style:none;margin:0;padding:0;font-size:12.8px;line-height:1.75}
+.changes-grid li{color:var(--muted);overflow:hidden;text-overflow:ellipsis}
+.changes-grid li b{font-variant-numeric:tabular-nums}
+.changes-grid .dim{color:var(--dim)}
