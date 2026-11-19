@@ -21,6 +21,19 @@ context = json.load(open(APP / "context.json"))
 leagues = json.load(open(APP / "leagues.json")) if (APP / "leagues.json").exists() else []
 changes = json.load(open(APP / "changes.json")) if (APP / "changes.json").exists() else None
 avail = json.load(open(APP / "avail.json")) if (APP / "avail.json").exists() else None
+consensus = json.load(open(APP / "consensus.json")) if (APP / "consensus.json").exists() else None
+
+# --- guardia sui minuti della fonte: alcuni giocatori arrivano con 11 presenze e 1-4 minuti
+# giocati (Mandas, De Gea, Bijlow, Palmisani, Ferguson, Delprato, Dragusin nella giornata 11).
+# Con quei minuti il modello impazzisce (la proiezione finisce al tetto di 10,5), quindi li
+# ricostruisco dalle presenze da titolare invece di lasciare il buco.
+MIN_FIX = []
+for p in data:
+    pres, mn, tit = p.get("pres") or 0, p.get("min") or 0, p.get("tit") or 0
+    if pres >= 3 and mn / (pres * 90) < 0.15 and tit / pres >= 0.7:
+        p["min"] = round(pres * 90 * 0.9)
+        p["minStimati"] = True
+        MIN_FIX.append(p.get("n"))
 
 # indisponibili di oggi e probabili formazioni: non stanno in data.json (che viene
 # riscritto a ogni aggiornamento) ma in avail.json, e vengono fusi qui dentro.
@@ -46,8 +59,31 @@ if avail:
             p["titolarita"] = 0
             p["inPanchina"] = True
             n_lu += 1
+    diffidati = set(avail.get("diffidati", []))
+    for q in data:
+        if q.get("sid") in diffidati:
+            q["diffidato"] = True
     AVAIL_INFO = {"data": avail.get("date", ""), "giornata": avail.get("gw"),
-                  "fuori": n_out, "titolari": n_lu, "fonte": avail.get("source", "fantacalcio.it")}
+                  "fuori": n_out, "titolari": n_lu, "diffidati": len(diffidati),
+                  "minutaggiCorretti": len(MIN_FIX),
+                  "fonte": avail.get("source", "fantacalcio.it")}
+
+# fantamedia secondo tre testate (FantaPazz): mediana, valori e distanza
+CONS_INFO = None
+if consensus and consensus.get("players"):
+    cons = consensus["players"]
+    n_cons = 0
+    for p in data:
+        c = cons.get(str(p.get("sid")))
+        if not c:
+            continue
+        p["fmCons"] = c.get("med")
+        p["fmTestate"] = c.get("fm")
+        p["fmSpread"] = c.get("spread")
+        n_cons += 1
+    CONS_INFO = {"data": consensus.get("date", ""), "n": n_cons,
+                 "testate": consensus.get("testate", ["FantaPazz", "Gazzetta", "Corriere dello Sport"]),
+                 "fonte": consensus.get("source", "fantapazz.com")}
 import datetime
 DATA_DATE = datetime.date.fromtimestamp((APP / "data.json").stat().st_mtime).strftime("%d/%m/%Y")
 css = (APP / "styles.css").read_text()
@@ -205,6 +241,7 @@ window.FANTATRADE_CTX = {json.dumps(context, ensure_ascii=False, separators=(','
 window.FANTATRADE_LEAGUES = {json.dumps(leagues, ensure_ascii=False, separators=(',', ':'))};
 window.FANTATRADE_CHANGES = {json.dumps(changes, ensure_ascii=False, separators=(',', ':'))};
 window.FANTATRADE_AVAIL = {json.dumps(AVAIL_INFO, ensure_ascii=False, separators=(',', ':'))};
+window.FANTATRADE_CONSENSUS = {json.dumps(CONS_INFO, ensure_ascii=False, separators=(',', ':'))};
 </script>
 <script>
 {model}

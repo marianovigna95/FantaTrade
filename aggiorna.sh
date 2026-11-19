@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Aggiorna FantaTrade in un colpo solo: quotazioni/statistiche -> xG -> indisponibili/formazioni -> ricompila.
+# Aggiorna FantaTrade in un colpo solo: quotazioni/statistiche -> xG -> indisponibili/formazioni -> testate -> ricompila.
 # Pensato per cron o launchd: non si ferma se una fonte è giù, scrive tutto in aggiorna.log.
 #
 #   ./aggiorna.sh            aggiornamento completo
@@ -31,6 +31,12 @@ if a.exists():
     print(f"  avail.json: {len(av.get('out', []))} indisponibili, {len(av.get('lineup', {}))} titolarità, dal {av.get('date')}")
 else:
     print("  avail.json: assente (indisponibili e probabili formazioni non ancora scaricati)")
+c = pathlib.Path("app/consensus.json")
+if c.exists():
+    cs = json.loads(c.read_text())
+    print(f"  consensus.json: {len(cs.get('players', {}))} giocatori con tre fantamedie, dal {cs.get('date')}")
+else:
+    print("  consensus.json: assente (fantamedia delle testate non ancora scaricata)")
 f = pathlib.Path("app/data.json")
 d = json.loads(f.read_text())
 ts = dt.datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
@@ -56,7 +62,11 @@ $PY fetch_extra.py || { echo "!! fetch_extra.py fallito: tengo i dati precedenti
 echo "-- fetch_avail.py"
 $PY fetch_avail.py --no-build || { echo "!! fetch_avail.py fallito: tengo gli indisponibili precedenti"; rc=1; }
 
-# 4. ricompila l'app a file singolo (idempotente)
+# 4. fantamedia secondo tre testate (FantaPazz/Gazzetta/CdS): consenso e volatilità
+echo "-- fetch_consensus.py"
+$PY fetch_consensus.py --no-build || { echo "!! fetch_consensus.py fallito: tengo i dati precedenti"; rc=1; }
+
+# 5. ricompila l'app a file singolo (idempotente)
 echo "-- build.py"
 $PY build.py || { echo "!! build.py fallito"; rc=2; }
 
