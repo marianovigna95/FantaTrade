@@ -2,11 +2,12 @@ name: Aggiorna dati e pubblica
 
 # Pubblica una volta, poi i dati si aggiornano da soli.
 # - gira ogni lunedì mattina e su richiesta (tab Actions -> Run workflow)
-# - riscarica le statistiche, ricompila l'app e ripubblica su GitHub Pages
+# - riscarica quotazioni e statistiche, prova a scaricare gli xG, ricompila e ripubblica
+# - se una fonte è giù NON si rompe niente: i dati restano quelli di prima e il run resta verde
 
 on:
   schedule:
-    - cron: "0 6 * * 1"      # ogni lunedì alle 06:00 UTC
+    - cron: "0 6 * * 1"      # ogni lunedì alle 06:00 UTC (08:00 in Italia)
   workflow_dispatch:          # avvio manuale dal tab Actions
   push:
     branches: [main]
@@ -14,6 +15,8 @@ on:
       - "app/**"
       - "build.py"
       - "refresh_data.py"
+      - "fetch_extra.py"
+      - "import_extra.py"
       - ".github/workflows/**"
 
 permissions:
@@ -29,35 +32,62 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
       - name: Dipendenze
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq fonts-dejavu-core
-          pip install --quiet beautifulsoup4 lxml pillow
+          pip install --quiet -r requirements.txt
 
       - name: Scarica dati aggiornati e ricompila
-        run: python3 refresh_data.py --min-price 0 || echo "::warning::refresh_data.py non riuscito, tengo i dati precedenti"
+        run: |
+          set -o pipefail
+          echo "== $(date -u +%F\ %H:%M) refresh_data.py ==" >> aggiorna_log.txt
+          python3 refresh_data.py --min-price 0 2>&1 | tee -a aggiorna_log.txt \
+            || echo "::warning::refresh_data.py non riuscito, tengo i dati precedenti"
 
       # Dati avanzati (xG, tiri). Va DOPO refresh_data.py, che riscrive data.json da zero.
       # Non fallisce mai la build: se la fonte è giù, il file dei dati resta com'è.
       - name: Dati avanzati (xG e tiri)
-        run: python3 fetch_extra.py || echo "::warning::fetch_extra.py non riuscito, tengo i dati precedenti"
+        run: |
+          set -o pipefail
+          echo "== $(date -u +%F\ %H:%M) fetch_extra.py ==" >> aggiorna_log.txt
+          python3 fetch_extra.py 2>&1 | tee -a aggiorna_log.txt \
+            || echo "::warning::fetch_extra.py non riuscito, tengo i dati precedenti"
 
-      - name: Ricompila con i dati avanzati
+      - name: Ricompila
         run: python3 build.py
 
       - name: Salva i dati aggiornati nel repository
         run: |
           git config user.name  "fantatrade-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add -u app/data.json app/model.js fantatrade.html app/extra_report.txt
-          git diff --quiet --cached || git commit -m "dati aggiornati $(date -u +%F)"
-          git push
+          # tutti i file tracciati + i nuovi report; .gitignore tiene fuori cache e cartelle di lavoro
+          git add -A .
+          if git diff --cached --quiet; then
+            echo "nessuna modifica ai dati"
+          else
+            git status --short
+            git commit -m "dati aggiornati $(date -u +%F)"
+            git push || {
+              echo "::error::push rifiutato. Settings -> Actions -> General -> Workflow permissions -> Read and write permissions"
+              exit 1
+            }
+          fi
+
+      - name: Verifica che l'app sia ancora completa
+        run: |
+          python3 - <<'EOF'
+          import json, pathlib
+          d = json.loads(pathlib.Path("app/data.json").read_text())
+          n = sum(1 for p in d if p.get("pres"))
+          print(f"controllo: {len(d)} giocatori, {n} con statistiche")
+          assert len(d) >= 500, "database troppo piccolo: qualcosa è andato storto"
+          EOF
 
       - uses: actions/configure-pages@v5
 
@@ -65,9 +95,12 @@ jobs:
         with:
           path: dist
 
+  # Pages funziona solo con repository pubblico su piano gratuito.
+  # Se non è attivo, il deploy viene saltato senza far diventare rosso il run.
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    continue-on-error: true
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
