@@ -1,0 +1,9 @@
+# cartelle di lavoro / cache: non servono nel repository
+__pycache__/
+node_modules/
+shots/
+data/
+uploads/
+dist/
+aggiorna.log
+.DS_Store

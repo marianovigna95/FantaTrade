@@ -1,0 +1,365 @@
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7ef0b0" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 8h13l-3-3M20 16H7l3 3"/>
+        </svg>
+      </div>
+      <div>
+        <h1>FantaTrade</h1>
+        <div class="sub">consulente per scambi fantacalcio · <b>Serie A 2026/27</b> · dati al 15/11/2026</div>
+      </div>
+    </div>
+    <div class="settings">
+      <div class="setting">Squadre
+        <div class="stepper"><button data-step="teams" data-dir="-1">−</button><span class="val" id="valTeams">10</span><button data-step="teams" data-dir="1">+</button></div>
+      </div>
+      <div class="setting">Modulo
+        <select id="selFormation">
+          <option>3-4-3</option><option>4-3-3</option><option>4-4-2</option><option>3-5-2</option><option>4-5-1</option>
+        </select>
+      </div>
+      <div class="setting">Giornate rimaste
+        <div class="stepper"><button data-step="gw" data-dir="-1">−</button><span class="val" id="valGw">27</span><button data-step="gw" data-dir="1">+</button></div>
+      </div>
+      <div class="setting">Prospettiva
+        <div class="toolbar" style="margin:0;gap:7px">
+          <input type="range" id="rngProspect" min="0" max="100" step="5" value="65" title="Quanto pesa quello che il giocatore farà rispetto a quello che ha già fatto">
+          <span class="val" id="valProspect">65% futuro</span>
+        </div>
+      </div>
+      <div class="setting">Lega
+        <select id="selLeague" style="min-width:150px"></select>
+      </div>
+      <div class="setting">Avversario
+        <select id="selOpp" style="min-width:150px"></select>
+      </div>
+      <div class="setting">Calendario
+        <div class="toolbar" style="margin:0;gap:6px">
+          <button class="small on" id="btnCal" title="Se attivo, la difficoltà delle prossime partite entra nei punti attesi">incluso</button>
+          <div class="stepper"><button data-step="horizon" data-dir="-1">−</button><span class="val" id="valHorizon">5 giornate</span><button data-step="horizon" data-dir="1">+</button></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="active" data-tab="trade">Analizza scambio</button>
+    <button data-tab="league">Lega</button>
+    <button data-tab="report">Report</button>
+    <button data-tab="find">Trova scambi</button>
+    <button data-tab="players">Giocatori</button>
+    <button data-tab="doc">Come funziona</button>
+  </nav>
+
+  <!-- ============ ANALIZZA SCAMBIO ============ -->
+  <section class="tab active" id="tab-trade">
+    <div class="toolbar">
+      <button class="ghost small" id="btnDemo">Carica due rose di esempio</button>
+      <button class="ghost small" id="btnPasteA">Incolla la tua rosa</button>
+      <button class="ghost small" id="btnPF" title="Incolla le probabili formazioni: i titolari diventano disponibili, chi è in lista come dubbio resta in dubbio">Probabili formazioni</button>
+      <button class="ghost small" id="btnPasteB">Incolla rosa avversario</button>
+      <button class="ghost small" id="btnExport" title="Scarica un file con le tue due rose">Esporta rose</button>
+      <button class="ghost small" id="btnImport" title="Ricarica da un file esportato">Importa rose</button>
+      <button class="ghost small" id="btnLink" title="Copia un link con dentro le due rose">Copia link</button>
+      <input type="file" id="fileImport" accept=".json,application/json" style="display:none">
+      <span class="grow"></span>
+      <label class="chk" title="I crediti non cambiano il valore dei giocatori: servono solo a pareggiare lo scambio"><input type="checkbox" id="chkCredits" checked> conguaglio in crediti</label>
+      <label class="chk" title="Gli svincolati si possono prendere solo all'asta di riparazione di febbraio: attiva solo in quella finestra"><input type="checkbox" id="chkFree"> confronta con gli svincolati (asta di riparazione)</label>
+      <button class="ghost small" id="btnUndo" disabled>Annulla scambio</button>
+      <button class="ghost small" id="btnReset">Azzera selezione</button>
+      <button class="small primary" id="btnApply" disabled>Applica scambio</button>
+    </div>
+
+    <div class="row2">
+      <div class="panel">
+        <h2>La tua squadra <span class="count" id="countA">0</span></h2>
+        <p class="hint">Clicca un giocatore per inserirlo tra quelli che <b>dai via</b>.</p>
+        <input class="teamname" id="nameA" value="La mia squadra">
+        <div class="search">
+          <input id="searchA" placeholder="Cerca e aggiungi un giocatore…" autocomplete="off">
+          <div class="suggest" id="sugA"></div>
+        </div>
+        <ul class="roster" id="rosA"></ul>
+      </div>
+      <div class="panel">
+        <h2>Avversario <span class="count" id="countB">0</span></h2>
+        <p class="hint">Clicca un giocatore per inserirlo tra quelli che <b>ricevi</b>.</p>
+        <input class="teamname" id="nameB" value="Avversario">
+        <div class="search">
+          <input id="searchB" placeholder="Cerca e aggiungi un giocatore…" autocomplete="off">
+          <div class="suggest" id="sugB"></div>
+        </div>
+        <ul class="roster" id="rosB"></ul>
+      </div>
+    </div>
+
+    <div class="summary">
+      <div class="sum-col">
+        <h3>Dai via</h3>
+        <div class="chips" id="giveChips"></div>
+        <div class="tot" id="giveTot"></div>
+      </div>
+      <div class="swapicon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>
+      </div>
+      <div class="sum-col">
+        <h3>Ricevi</h3>
+        <div class="chips" id="getChips"></div>
+        <div class="tot" id="getTot"></div>
+      </div>
+    </div>
+
+    <div class="verdict" id="verdict"></div>
+  </section>
+
+  <!-- ============ LEGA ============ -->
+  <section class="tab" id="tab-league">
+    <div id="leagueOut"></div>
+  </section>
+
+  <!-- ============ REPORT ============ -->
+  <section class="tab" id="tab-report">
+    <div id="reportTop"></div>
+
+    <div class="panel" style="margin:16px 0 12px">
+      <div class="toolbar" style="margin:0">
+        <h2 style="margin:0">Offerte pronte da mandare</h2>
+        <span class="grow"></span>
+        <div class="rolefilter" id="offerDepth">
+          <button data-depth="1">solo 1 vs 1</button>
+          <button data-depth="2" class="on">anche 2 vs 2</button>
+        </div>
+        <label class="chk" title="Cerca anche gli scambi in cui l'altro perde punti ma incassa crediti"><input type="checkbox" id="chkAsym" checked> anche da pareggiare con crediti</label>
+        <button class="ghost small" data-undo disabled>Annulla scambio</button>
+        <button class="primary small" id="btnOffers">Ricalcola</button>
+      </div>
+      <p class="hint" style="margin:9px 0 0">Per ogni avversario il motore cerca lo scambio <b>pari ruolo</b> che fa guadagnare punti a tutti e due. Il messaggio è già scritto: copialo e incollalo in chat. Si ricalcola da solo quando le rose cambiano (import, scambio applicato, stato ✓/!/✕).</p>
+    </div>
+    <div id="offersOut"></div>
+  </section>
+
+  <!-- ============ TROVA SCAMBI ============ -->
+  <section class="tab" id="tab-find">
+    <div class="panel" style="margin-bottom:14px">
+      <h2>Scambi vantaggiosi per entrambi</h2>
+      <p class="hint">Il motore prova tutte le combinazioni 1 contro 1 e 2 contro 2 tra le due rose e tiene solo quelle in cui <b>entrambe le squadre migliorano</b> il proprio undici titolare.</p>
+      <div class="toolbar" style="margin:0">
+        <div class="rolefilter" id="depthFilter">
+          <button data-depth="1">solo 1 vs 1</button>
+          <button data-depth="2" class="on">anche 2 vs 2</button>
+        </div>
+        <select id="selRule" title="Regola sui ruoli" style="max-width:240px">
+          <option value="parity">scambi pari ruolo</option>
+          <option value="free">ruoli misti liberi</option>
+        </select>
+        <label class="chk"><input type="checkbox" id="chkAll"> tutte le squadre della lega</label>
+        <span class="grow"></span>
+        <button class="primary small" id="btnFind">Cerca scambi</button>
+      </div>
+    </div>
+    <div id="findOut"></div>
+  </section>
+
+  <!-- ============ GIOCATORI ============ -->
+  <section class="tab" id="tab-players">
+    <div class="toolbar">
+      <div class="search" style="margin:0;flex:1;max-width:340px">
+        <input id="dataQuery" placeholder="Filtra per nome o squadra…" autocomplete="off">
+      </div>
+      <div class="rolefilter" id="dataRoles">
+        <button data-role="ALL" class="on">tutti</button><button data-role="P">P</button><button data-role="D">D</button><button data-role="C">C</button><button data-role="A">A</button>
+      </div>
+      <span class="grow"></span>
+      <span style="font-size:12px;color:var(--dim)" id="dataCount"></span>
+    </div>
+    <div class="tblwrap">
+      <table class="data" id="dataTable">
+        <thead><tr>
+          <th data-key="r">R</th>
+          <th data-key="n">Giocatore</th>
+          <th data-key="t">Squadra</th>
+          <th data-key="pres">Pres</th>
+          <th data-key="minshare">Min%</th>
+          <th data-key="fm">FM</th>
+          <th data-key="ev">Pt/g</th>
+          <th data-key="vorp">Sopra rincalzo</th>
+          <th data-key="form">Forma</th>
+          <th data-key="proj" title="Fantamedia proiettata: quanto è destinato a fare">Proiez.</th>
+          <th data-key="xfm">Attesa</th>
+          <th data-key="trend">Tendenza</th>
+          <th data-key="xg90" class="col-adv" title="Gol attesi per 90 minuti (xG senza rigori): la misura più stabile della pericolosità">xG/90</th>
+          <th data-key="fin" class="col-adv" title="Gol fatti meno gol attesi: sopra zero sta finalizzando meglio del previsto (destinato a calare), sotto zero il contrario">Gol−xG</th>
+          <th data-key="injr" class="col-inj" title="Quota di giornate perse per infortunio nelle ultime due stagioni, dallo storico">Rischio inf.</th>
+          <th data-key="prof" title="Titolare fisso / in ballottaggio / riserva, e chi gli contende il posto">Profilo</th>
+          <th data-key="cal">Calendario</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="legend">
+      <span><b>FM</b> = fantamedia 2026/27</span>
+      <span><b>Min%</b> = quanta parte di una partita gioca in media (minuti / 90)</span>
+      <span><b>Pt/g</b> = punti attesi a giornata (fantamedia, titolarità, calendario)</span>
+      <span><b>Profilo</b> = titolare fisso / in ballottaggio (con chi) / riserva (dietro a chi), dai minuti e dai compagni di ruolo</span>
+      <span><b>xG/90 · Gol−xG · Rischio inf.</b> compaiono solo se hai importato i dati avanzati (<code>python3 import_extra.py</code>)</span>
+      <span><b>Sopra rincalzo</b> = quanto vale più del miglior giocatore libero di quel ruolo</span>
+      <span><b>Forma</b> = distanza dalla fantamedia attesa</span>
+      <span><b>Proiez.</b> = quanto è destinato a fare (voto atteso + bonus compressi sul ruolo)</span>
+      <span><b>Attesa</b> = mix tra fatto e farà, secondo la Prospettiva impostata in alto</span>
+      <span><b>Tendenza</b> = ↗ in crescita · → stabile · ↘ in calo</span>
+      <span><b>Calendario</b> = facilità delle prossime partite per quel ruolo (0-100 rispetto alle altre squadre di Serie A, 50 = media)</span>
+    </div>
+  </section>
+
+  <!-- ============ DOC ============ -->
+  <section class="tab" id="tab-doc">
+    <div class="panel doc">
+      <h2>Come funziona il modello</h2>
+      <p>FantaTrade non dà "consigli a sensazione": stima quanti punti a giornata ogni giocatore porta alla tua formazione, e misura se uno scambio migliora o peggiora l'undici titolare delle due squadre.</p>
+
+      <h3>1. Punti attesi a giornata</h3>
+      <p>Per ogni giocatore: <code>Pt/g = P(gioca) × fantamedia + (1 − P(gioca)) × 6,0</code></p>
+      <ul>
+        <li><b>fantamedia</b>: quella reale della stagione 2026/27, "compressa" verso l'attesa iniziale se i minuti giocati sono pochi (chi ha giocato 2 partite non è un fenomeno);</li>
+        <li><b>attesa iniziale</b>: dedotta dalla quotazione ufficiale con una curva stimata sui dati di quest'anno, diversa per ruolo. Serve solo per chi ha pochi minuti giocati: chi ha giocato tanto è giudicato dai fatti;</li>
+        <li><b>P(gioca)</b>: mix tra continuità di presenze (presenze / giornate) e minutaggio reale (minuti giocati / 90 per presenza). Uso i minuti al posto del campo "partite da titolare" perché nelle fonti disponibili quel dato è incoerente.</li>
+      </ul>
+
+      <h3>2. Il "rincalzo" e la scarsità di ruolo</h3>
+      <p>Un attaccante da 8 di fantamedia non vale quanto un difensore da 8, perché il sostituto libero in attacco è peggiore. Per ogni ruolo calcolo il livello del <b>giocatore che chiude il reparto</b> (squadre × titolari per ruolo, secondo il modulo scelto) e misuro solo il valore che sta sopra quella soglia. È il criterio che rende confrontabili ruoli diversi.</p>
+
+      <h3>3. Lo scambio</h3>
+      <p>Simulo la tua <b>miglior formazione possibile</b> prima e dopo lo scambio (nel modulo scelto), faccio lo stesso per l'avversario e confronto i due totali. Se entrambi gli undici migliorano, lo scambio è un <b>win-win</b>: ecco perché ha senso proporlo. Il giudizio è quindi <b>solo sui punti</b>: quanto punti a giornata guadagni tu e quanto guadagna lui.</p>
+
+      <h3>Lo stato dei giocatori (✓ / ! / ✕)</h3>
+      <p>Nelle due rose, il pallino accanto a ogni nome imposta la disponibilità: <b>✓</b> disponibile, <b>!</b> in dubbio, <b>✕</b> fuori (infortunio, squalifica, scelta tecnica). Lo stato scala la probabilità che il giocatore prenda il voto — quindi punti attesi, giudizio sullo scambio e ricerca degli scambi si aggiornano subito. È l'informazione che i dati storici non possono contenere: serve che gliela dici tu prima della giornata.</p>
+      <p>Per non farlo a mano su 25 giocatori c'è <b>Probabili formazioni</b> (scheda Analizza scambio): incolli le formazioni probabili come le trovi sui siti — <code>Roma (3-4-2-1): Svilar; Mancini, N'Dicka, …</code> — e l'app riconosce le squadre, i giocatori e le percentuali. Chi è in lista diventa <b>disponibile</b>; chi in quella squadra gioca di solito ma non è in lista passa a <b>in dubbio</b>; sotto il 55% di titolarità resta in dubbio. Da lì punti attesi, giudizi e offerte si ricalcolano da soli. Il pulsante <i>Azzera tutti gli stati</i> nello stesso riquadro riporta tutto a "disponibile".</p>
+
+      <h3>4. Il calendario: chi ha le prossime partite facili</h3>
+      <p>Per ogni squadra di Serie A stimo <b>quanto attacca</b> e <b>quanto concede</b>, dai gol fatti e subiti. Con 11 giornate un 4-0 falsa tutto, quindi i due tassi vengono <b>compattati verso la media del campionato</b> (peso k = 6 partite): a inizio stagione conta molto la media, a fine stagione solo quello che è successo davvero.</p>
+      <p>Da lì la facilità di ogni singola partita, che <b>non è uguale per tutti i ruoli</b>:</p>
+      <ul>
+        <li><b>attaccanti</b>: conta quanto concede l'avversario (difesa leaky = facile);</li>
+        <li><b>difensori e portieri</b>: conta quanto segna l'avversario, con un peso leggermente attenuato perché un difensore forte limita i danni;</li>
+        <li><b>centrocampisti</b>: 60% della facilità offensiva e 40% di quella difensiva, perché fanno le due fasi.</li>
+      </ul>
+      <p>Ogni partita ha anche il <b>campo</b>: giocare in casa vale un piccolo bonus (e in trasferta un malus). Le partite delle prossime N giornate (default 5, si cambia in alto da 1 a 10) vengono poi pesate <b>con un decadimento</b>: la giornata di domenica conta più di quella fra due mesi, perché più avanti si va e meno sappiamo (formazioni, infortuni, calendario che cambia).</p>
+      <p>La facilità grezza di cinque partite varia poco tra una squadra e l'altra, quindi in interfaccia la mostro come <b>percentile sulle 20 squadre di Serie A</b>: 50 = calendario nella media, 80 = tra i più morbidi, 20 = tra i più duri. La colonna <b>Calendario</b> della tabella giocatori e il pannello <b>Il tuo calendario</b> nel Report usano la stessa scala: lì vedi, riga per riga, la prossima avversaria dei tuoi undici titolari, con la facilità del periodo e il consiglio del caso (se il ciclo è duro non è il momento di comprare attaccanti di quella squadra).</p>
+
+      <h3>5. Il futuro conta più del passato</h3>
+      <p>È il criterio che conta di più a stagione in corso. Per ogni giocatore tengo separate due cose:</p>
+      <ul>
+        <li><b>quello che ha fatto</b>: la fantamedia reale, compressa verso l'attesa iniziale se i minuti sono pochi;</li>
+        <li><b>quello che farà</b>: il voto atteso (quanto gioca e come gioca, che si stabilizza in poche partite) più i <b>bonus attesi</b>, e i bonus sono la parte rumorosa: chi ha segnato 3 gol in 4 partite non è un fenomeno, chi è a secco ma gioca e prende 6,5 non è finito.</li>
+      </ul>
+      <p>Il motivo è statistico: i gol sono pochi eventi, e su 8-10 partite il "3 gol in 4 gare" è in gran parte fortuna. Il voto invece è molto più stabile. Per questo il bonus viene compresso verso la media del suo ruolo molto più forte del voto (K=16 partite contro K=4). Anche la voce "in forma / in calo" è calcolata sul <b>voto</b> delle ultime tre partite, non sul fantavoto: altrimenti avrebbe inseguito proprio la fortuna dei bonus. Il risultato è che un attaccante a secco ma con buon voto e posto fisso sale, e chi ha segnato tanto in poco tempo scende un po': <b>Varela</b> con 9 gol in 10 partite passa da 8,57 a 8,06 di proiezione, un attaccante a secco con 7 di voto sale.</p>
+      <p>Quanto pesa il futuro lo decidi tu con lo slider <b>Prospettiva</b> in alto: al 65% (default) conta per due terzi il "farà", allo 0% torni al puro dato di fatto, al 100% guardi solo la proiezione. Tutto — punti attesi, giudizi, offerte, classifica — si ricalcola mentre muovi lo slider. Nella tabella giocatori trovi le tre colonne affiancate: <b>FM</b> (fatto), <b>Proiez.</b> (farà) e <b>Attesa</b> (la sintesi), più la freccia <b>↗ / → / ↘</b> per il momento.</p>
+
+      <h3>6. Più leghe e tutte le rose</h3>
+      <p>La scheda <b>Lega</b> contiene tutte le squadre (di una o più leghe). Da lì imposti qual è la tua, incolli le rose di tutti e vedi subito in quali ruoli sei scoperto. Con <b>Trova scambi</b> e l'opzione <i>tutte le squadre della lega</i> il motore gira su ogni avversario e ti mostra le proposte migliori, con il nome della squadra a cui proporle.</p>
+
+      <h3>La scheda Report: la tua squadra sotto esame</h3>
+      <p>Apri <b>Report</b> e trovi: la tua posizione in lega <i>per punti attesi</i> (non la classifica reale), il tuo undici reparto per reparto con il titolare più debole evidenziato e quanto guadagneresti mettendo il miglior giocatore della lega al suo posto, la classifica di tutte le squadre con il distacco da te, e soprattutto le <b>offerte pronte</b>: per ogni avversario lo scambio pari-ruolo che fa guadagnare entrambi, con il messaggio da copiare e incollare in chat. Quando applichi uno scambio (o importi rose nuove, o cambi lo stato ✓/!/✕ di un giocatore) il report e le offerte si <b>ricalcolano da soli</b> sulle rose aggiornate.</p>
+
+      <h3>Perché non usiamo i prezzi d'asta (per valutare)</h3>
+      <p>Quanto un giocatore è stato pagato ad agosto <b>non dice più niente</b> a novembre: chi ha pagato tanto un giocatore che poi rende poco non lo valuta certo di più, e chi ha preso un affare a poco prezzo non lo svende. Per questo nessun giudizio, nessun consiglio e nessuna proposta si basa sul prezzo: il valore di un giocatore qui è <b>solo</b> quello che porta all'undici, in punti a giornata. Il prezzo serve in un solo posto, ed è un altro mestiere: come <b>tasso di cambio</b> per il conguaglio in crediti (sotto).</p>
+
+      <h3>Il conguaglio in crediti</h3>
+      <p>Se uno dei due guadagna più punti dell'altro, lo scambio si può pareggiare aggiungendo crediti. L'app calcola <b>chi</b> li deve mettere (chi guadagna più punti) e <b>quanti</b>: la differenza in punti a giornata moltiplicata per il valore di un punto, arrotondata a multipli di 5.</p>
+      <p>Quel valore non è inventato: è la <b>pendenza dei prezzi realmente pagati all'asta nella tua lega</b> (quanto è costato, in media, un punto a giornata in più). Nelle leghe importate viene <b>≈ 55 crediti per punto a giornata</b>, quindi una differenza di 0,3 pt/g vale una quindicina di crediti, 0,6 pt/g una trentina. Il mercato però non è lineare — un punto su un top è costato molto più di un punto su un giocatore medio — quindi la tariffa <b>cresce col livello dei giocatori scambiati</b> (fino a ×2 sui campioni, ×0,7 sui rincalzi). L'ho volutamente attenuata: la curva stimata sui dati spiega poco (R² 0,23) e inseguirla troppo vorrebbe dire inseguire il rumore.</p> Nella scheda Lega vedi quanti crediti restano a ogni squadra (<i>budget meno la spesa d'asta</i>, e il budget si può correggere a mano): l'app ti avvisa se il conguaglio supera quello che l'altra squadra ha davvero.</p>
+      <p>Quando i crediti sono attivi, il motore cerca <b>due tipi di proposta</b>: quelle in cui guadagnano punti entrambi (le accetta chiunque) e quelle <b>da pareggiare con i crediti</b> — tu ci guadagni punti, lui li perde ma incassa i crediti. Sono le operazioni che prima non potevi nemmeno vedere, cioè i colpi grossi: un campione in cambio di due buoni giocatori, con la differenza pagata in crediti. L'interruttore <i>anche da pareggiare con crediti</i> nella scheda Report le accende o spegne.</p>
+      <p>La cifra non è fissa: dipende anche da <b>quanto gli serve</b> quel ruolo. Se il suo titolare più debole in quel reparto è molto sotto il giocatore che riceve (o è proprio scoperto), non ha alternative e la leva è tua: se paga lui la richiesta sale fino al <b>+60%</b>, se paghi tu scende fino al <b>−50%</b>. Nelle offerte lo vedi con l'etichetta <i>gli serve C</i>.</p>
+      <p>Il conguaglio si attiva o disattiva con l'interruttore <b>conguaglio in crediti</b> nella scheda Analizza scambio: quando è attivo compare nel giudizio, nelle offerte pronte e nel messaggio da copiare («… per Adams C. + 15 crediti»), e applicando lo scambio il saldo crediti delle due squadre si aggiorna. <b>Attenzione</b>: sulla piattaforma Fantacalcio.it lo scambio è solo di giocatori — i crediti sono un patto tra voi, da far rispettare secondo il regolamento della lega. L'app li tiene come conto, non li muove davvero.</p>
+
+      <h3>I pesi non sono a mano</h3>
+      <p>Quanto comprimere il voto e quanto comprimere i bonus non l'ho deciso a occhio: i log delle ultime partite di 364 giocatori sono divisi in due metà, misuro quanto le due metà si somigliano (split-half) e correggo con Spearman-Brown per ottenere l'affidabilità a campione pieno. Il risultato: <b>voto K ≈ 7,5</b> presenze, <b>bonus K ≈ 15</b>. Cioè il voto diventa affidabile circa il doppio più in fretta dei gol, che è esattamente l'ipotesi del criterio "il futuro conta più del passato" — ma misurata, non assunta.</p>
+
+      <h3>Il riepilogo da mandare in chat</h3>
+      <p>Nel Report, pulsante <b>Copia riepilogo</b>: un testo pronto con la tua posizione per punti attesi, i quattro reparti, il punto debole con quanto c'è di meglio in lega, la facilità del calendario e le tre offerte in canna con i conguagli. Serve per farti consigliare da qualcuno che non ha voglia di aprire l'app.</p>
+
+      <h3>Se sbagli, si torna indietro</h3>
+      <p>Ogni scambio applicato resta in memoria (gli ultimi 5): il pulsante <b>Annulla scambio</b>, nella scheda Analizza scambio e in cima alle offerte del Report, rimette le rose e i crediti esattamente come erano prima. Serve perché applicare uno scambio modifica le rose vere dell'app: senza undo un errore si pagava solo reimportando i CSV.</p>
+
+      <h3>Chi prendere dal mercato (e quanto vale)</h3>
+      <p>Nel Report, sotto "chi rischia la panchina", trovi i <b>migliori svincolati per ruolo</b>: giocatori che nessuno ha in rosa nella tua lega (almeno 3 presenze), ordinati per punti attesi. Accanto a ognuno c'è il <b>guadagno</b>: quanto alzerebbe il tuo undici <i>oggi, senza cedere nessuno</i> (differenza col tuo titolare più debole in quel ruolo). Se esci da uno scambio corto in un reparto, lì vedi subito chi puoi ancora prendere senza scambiare niente — e quanto vale rispetto a quello che stai trattando.</p>
+
+      <h3>Dati avanzati: xG e storico infortuni</h3>
+      <p>Due cose che il listone non ha e che spostano le previsioni: <b>quanto tira</b> un giocatore e <b>quanto si rompe</b>. FantaTrade li accetta da fuori e li usa <i>solo se ci sono</i>:</p>
+      <p>● <b>xG (gol attesi)</b>: si importano da Understat o dall'export CSV di FBref. Il bonus proiettato diventa un mix tra gol fatti e gol attesi (peso 0,45, ridotto per chi ha pochi minuti): chi ha segnato 8 gol con 5 di xG viene abbassato, chi ha segnato 3 con 5,2 viene alzato. Nella scheda Giocatori compaiono le colonne <b>xG/90</b> e <b>Gol−xG</b>.<br>
+         ● <b>storico infortuni</b>: giorni fuori nelle ultime due stagioni → percentuale di giornate a rischio. Può solo <i>abbassare</i> la disponibilità, mai alzarla. Compare la colonna <b>Rischio inf.</b> e, sopra il 15%, una riga nei <i>contro</i> dello scambio.</p>
+      <p>L'<b>xG si aggiorna da solo</b> insieme al resto dei dati (una volta a settimana): <code>fetch_extra.py</code> legge la pagina Understat, abbina i nomi per cognome e squadra e segnala in <code>extra_report.txt</code> chi non ha riconosciuto — senza indovinare. Il <b>calendario infortuni</b> si importa due volte l'anno (<code>python3 import_extra.py mio_file.csv</code>, formato in <code>extra_template.csv</code>: <code>sid</code> oppure nome + squadra), perché Transfermarkt blocca gli script e nessuna fonte libera dà i giorni fuori via API. Ambigui e non trovati si saltano e si stampano: meglio un buco che un dato attribuito al giocatore sbagliato. Senza dati importati l'app funziona esattamente come prima — nessun numero inventato.</p>
+
+      <h3>Titolarità, ballottaggi e fragilità</h3>
+      <p>Un giocatore non vale solo per quello che ha fatto: conta <b>se gioca</b>, <b>chi gli contende il posto</b> e <b>quanto è stato disponibile</b>. L'app lo ricava dai dati che ha e lo dice in chiaro, senza inventare probabilità:</p>
+      <p>● <b>profilo</b>: <i>titolare fisso · titolare in ballottaggio · titolare a intermittenza · mezza partita · primo cambio · riserva · mai visto</i>, calcolato dalla quota minuti e dalla continuità di presenze;<br>
+         ● <b>ballottaggio</b>: compagno di club e di ruolo a meno di 0,35 pt/g con almeno 300 minuti giocati — è il rivale che può toglierti il posto (nella tabella di confronto: <i>"ballottaggio con Pulisic"</i>);<br>
+         ● <b>panchinaro di chi</b>: se è sotto nelle gerarchie, l'app dice dietro a chi (<i>"primo cambio dietro Zaccagni"</i>);<br>
+         ● <b>fragilità osservata</b>: quante giornate ha già saltato (<i>"5 giornate saltate su 11"</i>) — non una probabilità di infortunio, che non esiste come dato pubblico: è quello che è successo;<br>
+         ● <b>bonus per 90 minuti</b>: gol+assist ogni 90', il modo onesto di leggere la propensione offensiva senza i dati sui tiri, che il listone non fornisce.</p>
+      <p>Quando il giocatore che ricevi è in ballottaggio, il verdetto aggiunge una riga nei <i>contro</i>: <i>"se il posto lo perde scende verso 6,47: è un rischio che i punti attesi non prezzano"</i>. Nelle offerte pronte c'è il chip <b>ballottaggio</b> o <b>titolare sicuro</b>, e a parità di guadagno (entro 0,05 pt/g) vince la proposta con meno giocatori a rischio. La scheda <b>Giocatori</b> ha la colonna <b>Profilo</b>, ordinabile.</p>
+
+      <h3>Cosa succede davvero (nomi, non decimali)</h3>
+      <p>Un giudizio che dice "+0,44 pt/g" è vero ma astratto: il sabato tu decidi <i>chi schieri</i>. Per questo il verdetto apre con <b>in parole povere</b> — <i>"Konè M. prende il posto di Koopmeiners a centrocampo: gioca il 77% dei minuti contro il 59%, e finora ha fatto 2 gol contro 1. Tradotto in classifica: circa 12 punti in più nelle 27 giornate, e allarghi il margine su BERLUSCA DORTMUND"</i> — e sotto trovi il riquadro <b>Cosa succede davvero</b>:</p>
+      <p>● <b>i due undici a confronto</b>, ruolo per ruolo, con chi è nuovo evidenziato in verde;<br>
+         ● <b>chi entra al posto di chi</b>, con presenze, percentuale di minuti e bonus di entrambi ("7 presenze su 11, 77% dei minuti con 2 gol" contro "8 presenze, 59% dei minuti con 1 gol");<br>
+         ● <b>il primo cambio dalla panchina</b> prima e dopo ("a centrocampo Zaniolo 6,22 → Koopmeiners 6,23"): è lì che si vede se lo scambio ti lascia scoperto;<br>
+         ● <b>cosa cambia in classifica</b>: i punti teorici che lo scambio vale nelle giornate che restano e se ti fa passare davanti alla squadra che hai sopra (o allarga il margine su quella sotto);<br>
+         ● <b>cosa succede a lui</b>, in una riga.</p>
+      <p>La stessa concretezza è nel <b>messaggio da copiare</b> — <i>"Per te: entra Adams C. al posto di Romero D. in attacco (9 presenze su 11, 76% dei minuti con 4 gol, contro 9 presenze, 55% e 2 gol). Per me: entra Konè M. al posto di Koopmeiners a centrocampo. Nell'undici titolare ci guadagniamo entrambi: +0,38 pt/g per te, +0,44 per me, circa 10 e 12 punti nelle 27 giornate che restano"</i> — e nella scheda <b>Trova scambi</b>, dove ogni proposta dice chi entra al posto di chi sia nel tuo undici sia in quello dell'altro: si capisce il senso della combinazione prima ancora di aprirla.</p>
+      <p>Anche le voci <i>Perché conviene / Perché non conviene</i> ora nominano i giocatori ("Guadagni 0,44 pt a centrocampo — Konè M. al posto di Koopmeiners") e nelle <b>offerte pronte</b> ogni card dice in chiaro <i>entra X per Y</i>: si capisce il senso dello scambio senza leggere un numero.</p>
+
+      <h3>Il vero concorrente di uno scambio è un altro scambio</h3>
+      <p>Un guadagno di 0,05 pt/g sono 1,4 punti su 27 giornate: da solo non dice nulla. La domanda giusta è <b>"rispetto a cosa?"</b> — e la risposta dipende da cosa puoi fare davvero oggi.</p>
+      <p><b>Con le rose chiuse</b> (cioè quasi sempre) l'unica alternativa a uno scambio è un altro scambio: per ogni proposta l'app calcola di quanto alza il tuo undici <i>in quel ruolo</i>, al netto di quello che ti costa negli altri reparti, e lo confronta col massimo che le altre squadre della lega ti darebbero. Sulle offerte vedi il chip <span class="crchip">1° in lega per C</span> (non c'è di meglio) oppure <span class="crchip out">0,07 dal meglio (C)</span>; nel verdetto la frase <i>"in lega c'è di meglio a centrocampo: con X arriveresti a +0,51 (qui +0,44)"</i>, o il contrario quando sei al massimo — con l'avvertenza che differenze sotto 0,11 pt/g sono dentro il margine di errore del modello.</p>
+      <p><b>All'asta di riparazione</b>, che nel fantacalcio si tiene a febbraio, si aprono anche gli svincolati: lì il confronto cambia, perché puoi migliorare <i>senza cedere nessuno</i>. In quella finestra (20 gennaio – 20 febbraio) l'app accende da sola il confronto col mercato libero: se il tuo miglioramento a centrocampo è +0,44 ma c'è libero un centrocampista che ti darebbe +0,98, il guadagno <b>netto</b> è zero e il verdetto diventa <i>"Il mercato batte questo scambio"</i>. Fuori da quella finestra l'interruttore <b>confronta con gli svincolati</b> resta spento, perché comprare non si può.</p>
+      <p>Il pannello <b>migliori svincolati per ruolo</b> resta comunque in piedi tutto l'anno come lista di obiettivi: chi è libero oggi e quanto ti servirebbe, da tenere d'occhio per febbraio.</p>
+      <h3>Perché sì / perché no</h3>
+      <p>Ogni scambio analizzato viene spiegato su sei assi (più l'eventuale conguaglio in crediti): impatto sull'undici (in punti a giornata e a fine stagione), reparti, ruoli che restano scoperti, calendario di chi arriva rispetto a chi parte, fantamedia attesa dei giocatori coinvolti e numero di giocatori scambiati. Da una parte i motivi <b>a favore</b>, dall'altra quelli <b>contro</b>.</p>
+
+      <h3>Limiti (da sapere)</h3>
+      <ul>
+        <li>Il modello non conosce <b>infortuni e squalifiche</b> se non glielo dici: usa il pallino ✓/!/✕ sulle rose. Non legge le ultime notizie al posto tuo.</li>
+        <li>Il <b>calendario</b> è quello reale della Serie A (giornate 12-38) ma la forza delle squadre è stimata sui gol fatti/subiti attuali: non è una previsione della singola partita.</li>
+        <li>Non prevede le <b>probabili formazioni</b>: la titolarità è stimata da presenze e minuti.</li>
+        <li>Le leghe <b>mantra</b> (ruoli 12) non sono gestite: qui i ruoli sono i 4 classici.</li>
+        <li>Il valore dipende dalle impostazioni: cambia numero di squadre e modulo per vedere come cambiano i giudizi.</li>
+      </ul>
+
+      <h3>Fonti dei dati</h3>
+      <p><b>Listone e quotazioni</b>: listone ufficiale 2026/27 di Fantacalcio.it (603 giocatori, con quotazione iniziale QI, quotazione attuale QA e FVM). <b>Statistiche</b>: fantacalcio.dev, stagione 2026/27 (presenze, minuti, gol, assist, media voto, fantamedia), con le ultime 6 partite e lo storico delle fantamedie delle stagioni precedenti. <b>Calendario</b>: Serie A 2026/27 dalla 12ª giornata, con gol fatti/subiti per stimare la forza delle squadre. Dati aggiornati al 15/11/2026.</p>
+      <p style="color:var(--dim);font-size:12.5px">Prototipo: i dati sono incorporati nel file e non si aggiornano da soli (lo script <code>refresh_data.py</code> li riscarica e ricompila la pagina in un comando).</p>
+    </div>
+  </section>
+</div>
+
+<!-- modal incolla rosa -->
+<div class="modal" id="modal">
+  <div class="box">
+    <h3 id="modalTitle">Incolla la rosa</h3>
+    <p id="modalHint">Un giocatore per riga (o separati da virgola). Vanno bene anche "Cognome N." e i nomi completi.</p>
+    <textarea id="modalText" placeholder="Svilar&#10;Bremer&#10;Dimarco&#10;Paz N.&#10;Thuram"></textarea>
+    <div class="preview-match" id="modalPreview"></div>
+    <div class="foot">
+      <button class="ghost" id="modalCancel">Annulla</button>
+      <button class="ghost" id="modalResetAvail" style="display:none">Azzera tutti gli stati</button>
+      <button class="primary" id="modalOk">Carica rosa</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modalLeague">
+  <div class="box">
+    <h3>Incolla tutte le rose della lega</h3>
+    <p>Un blocco per squadra: <code>Nome: giocatore, giocatore, …</code>. Oppure incolla due colonne dal foglio di calcolo (<code>Nome ⇥ giocatore</code>, una riga per giocatore).</p>
+    <textarea id="leagueText" placeholder="I Tuoi: Svilar, Bremer, Dimarco, Barella, Thuram&#10;Mario's Team: Sommer, Bastoni, Calhanoglu, Lautaro Martinez, Kean&#10;…"></textarea>
+    <div class="preview-match" id="lgPreview"></div>
+    <div class="foot">
+      <button class="ghost" id="lgCancel">Annulla</button>
+      <button class="primary" id="lgOk">Importa lega</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
