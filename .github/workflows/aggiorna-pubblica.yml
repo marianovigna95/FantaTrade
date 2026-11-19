@@ -2,12 +2,15 @@ name: Aggiorna dati e pubblica
 
 # Pubblica una volta, poi i dati si aggiornano da soli.
 # - gira ogni martedì mattina e su richiesta (tab Actions -> Run workflow)
+# - gira anche il venerdì pomeriggio: solo indisponibili e probabili formazioni, che
+#   cambiano durante la settimana e servono freschi per la giornata del weekend
 # - riscarica quotazioni e statistiche, prova a scaricare gli xG, ricompila e ripubblica
 # - se una fonte è giù NON si rompe niente: i dati restano quelli di prima e il run resta verde
 
 on:
   schedule:
-    - cron: "0 6 * * 2"      # ogni martedì alle 06:00 UTC (08:00 in Italia), dopo il posticipo del lunedì
+    - cron: "0 6 * * 2"      # martedì 06:00 UTC (08:00 in Italia): tutto, dopo il posticipo del lunedì
+    - cron: "30 15 * * 5"    # venerdì 15:30 UTC (17:30 in Italia): solo indisponibili e probabili formazioni
   workflow_dispatch:          # avvio manuale dal tab Actions
   push:
     branches: [main]
@@ -16,6 +19,7 @@ on:
       - "build.py"
       - "refresh_data.py"
       - "fetch_extra.py"
+      - "fetch_avail.py"
       - "import_extra.py"
       - ".github/workflows/**"
 
@@ -44,6 +48,7 @@ jobs:
           pip install --quiet -r requirements.txt
 
       - name: Scarica dati aggiornati e ricompila
+        if: github.event.schedule != '30 15 * * 5'   # il venerdì i dati di base non si toccano
         run: |
           set -o pipefail
           # tengo solo le ultime settimane di log: il file non deve crescere per sempre
@@ -55,11 +60,21 @@ jobs:
       # Dati avanzati (xG, tiri). Va DOPO refresh_data.py, che riscrive data.json da zero.
       # Non fallisce mai la build: se la fonte è giù, il file dei dati resta com'è.
       - name: Dati avanzati (xG e tiri)
+        if: github.event.schedule != '30 15 * * 5'
         run: |
           set -o pipefail
           echo "== $(date -u +%F\ %H:%M) fetch_extra.py ==" >> aggiorna_log.txt
           python3 fetch_extra.py 2>&1 | tee -a aggiorna_log.txt \
             || echo "::warning::fetch_extra.py non riuscito, tengo i dati precedenti"
+
+      # Indisponibili di oggi e probabili formazioni, dal sito di Fantacalcio.it.
+      # Il venerdì è l'unico aggiornamento, quindi gira sempre e non deve far fallire nulla.
+      - name: Indisponibili e probabili formazioni
+        run: |
+          set -o pipefail
+          echo "== $(date -u +%F\ %H:%M) fetch_avail.py ==" >> aggiorna_log.txt
+          python3 fetch_avail.py --no-build 2>&1 | tee -a aggiorna_log.txt \
+            || echo "::warning::fetch_avail.py non riuscito, tengo gli indisponibili precedenti"
 
       - name: Ricompila
         run: python3 build.py
