@@ -508,7 +508,10 @@
         } else {
           p2 = ps;
         }
-        return { name: t.name || 'Squadra', me: !!t.me, players: ids, paid: p2 };
+        // i crediti dichiarati (quelli veri, letti su Fantacalcio.it) viaggiano con la lega:
+        // senza questo campo l'app li perdeva al caricamento e ricalcolava la stima
+        return { name: t.name || 'Squadra', me: !!t.me, players: ids, paid: p2,
+                 credits: (typeof t.credits === 'number' ? t.credits : undefined) };
       });
       var hasMe = teams.some(function (t) { return t.me; });
       if (!hasMe && teams.length) teams[0].me = true;

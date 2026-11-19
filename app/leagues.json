@@ -114,7 +114,8 @@
 "309": 200,
 "254": 124
 },
-"me": false
+"me": false,
+"credits": 107
 },
 {
 "name": "NGHOULAMAMT",
@@ -226,7 +227,8 @@
 "2134": 37,
 "2038": 1
 },
-"me": false
+"me": false,
+"credits": 105
 },
 {
 "name": "Molina Bianco",
@@ -338,7 +340,8 @@
 "536": 25,
 "133": 40
 },
-"me": false
+"me": false,
+"credits": 183
 },
 {
 "name": "DOUVIKAS FAMMI SOGNARE",
@@ -450,7 +453,8 @@
 "530": 1,
 "184": 21
 },
-"me": false
+"me": false,
+"credits": 9
 },
 {
 "name": "Fc cazzaThe",
@@ -562,7 +566,8 @@
 "572": 54,
 "152": 70
 },
-"me": false
+"me": false,
+"credits": 155
 },
 {
 "name": "BOTAFIGA FC",
@@ -674,7 +679,8 @@
 "1870": 40,
 "608": 1
 },
-"me": false
+"me": false,
+"credits": 111
 },
 {
 "name": "La pantera di Lisbona",
@@ -786,7 +792,8 @@
 "2423": 20,
 "1852": 1
 },
-"me": true
+"me": true,
+"credits": 225
 },
 {
 "name": "SPERA EBBASTA",
@@ -898,7 +905,8 @@
 "554": 10,
 "531": 60
 },
-"me": false
+"me": false,
+"credits": 50
 }
 ]
 },
@@ -1017,7 +1025,8 @@
 "2167": 60,
 "632": 92
 },
-"me": false
+"me": false,
+"credits": 19
 },
 {
 "name": "FcBomber10",
@@ -1129,7 +1138,8 @@
 "1870": 62,
 "610": 1
 },
-"me": false
+"me": false,
+"credits": 29
 },
 {
 "name": "FC AMERICAR",
@@ -1241,7 +1251,8 @@
 "2097": 347,
 "536": 17
 },
-"me": false
+"me": false,
+"credits": 0
 },
 {
 "name": "CARDONE TEAM",
@@ -1353,7 +1364,8 @@
 "1930": 1,
 "779": 5
 },
-"me": false
+"me": false,
+"credits": 18
 },
 {
 "name": "FUGA X LA VITTORIA",
@@ -1465,7 +1477,8 @@
 "152": 3,
 "4": 1
 },
-"me": false
+"me": false,
+"credits": 3
 },
 {
 "name": "Baff De Fierro",
@@ -1577,7 +1590,8 @@
 "2296": 9,
 "133": 12
 },
-"me": false
+"me": false,
+"credits": 30
 },
 {
 "name": "65.5 fc",
@@ -1689,7 +1703,8 @@
 "554": 13,
 "309": 140
 },
-"me": false
+"me": false,
+"credits": 298
 },
 {
 "name": "I LUDOPATYKOS",
@@ -1801,7 +1816,8 @@
 "531": 84,
 "184": 15
 },
-"me": false
+"me": false,
+"credits": 33
 },
 {
 "name": "peskvaranzia",
@@ -1913,7 +1929,8 @@
 "1852": 19,
 "572": 31
 },
-"me": false
+"me": false,
+"credits": 5
 },
 {
 "name": "la magica de bobby",
@@ -2025,7 +2042,8 @@
 "2423": 96,
 "1850": 35
 },
-"me": true
+"me": true,
+"credits": 28
 }
 ]
 }
