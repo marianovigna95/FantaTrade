@@ -20,3 +20,11 @@ FileNotFoundError: [Errno 2] No such file or directory: '/home/runner/work/Fanta
 ! understat non disponibile: playersData non trovato nella pagina (sito cambiato o pagina di errore?)
 nessuna fonte ha funzionato, i dati restano quelli di prima.
   - understat: playersData non trovato nella pagina (sito cambiato o pagina di errore?)
+== 2026-11-19 15:23 refresh_data.py ==
+  File "/home/runner/work/FantaTrade/FantaTrade/refresh_data.py", line 123
+    (ROOT / "data").mkdir(exist_ok=True)
+IndentationError: unexpected indent
+== 2026-11-19 15:23 fetch_extra.py ==
+! understat non disponibile: playersData non trovato nella pagina (sito cambiato o pagina di errore?)
+nessuna fonte ha funzionato, i dati restano quelli di prima.
+  - understat: playersData non trovato nella pagina (sito cambiato o pagina di errore?)
