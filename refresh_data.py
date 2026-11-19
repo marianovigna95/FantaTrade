@@ -120,6 +120,8 @@ def parse_quotazioni():
         if not p["qa"]:
             p["qa"] = p["qi"] or 1
     print(f"  listone ufficiale fantacalcio.it: {len(out)} giocatori")
+     (ROOT / "data").mkdir(exist_ok=True)
+    (ROOT / "data" / "listone_fc_raw.json").write_text(json.dumps(out, ensure_ascii=False, indent=0))
     (ROOT / "data" / "listone_fc_raw.json").write_text(json.dumps(out, ensure_ascii=False, indent=0))
     return out
 
