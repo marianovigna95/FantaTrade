@@ -23,6 +23,14 @@ Funzioni pratiche: **incolla la tua rosa** (testo libero, riconoscimento dei nom
 
 Ogni analisi si chiude con due elenchi ragionati: **perché conviene** e **perché non conviene** (impatto sull'undici, reparti, ruoli che restano scoperti, calendario, fantamedia attesa, valore di mercato, numero di giocatori scambiati).
 
+## Confronto diretto tra due giocatori
+
+Nella scheda **Giocatori** ci sono due caselle in alto: scrivi due nomi e ottieni il confronto riga per riga — punti attesi a giornata, minuti, profilo (titolare / ballottaggio / dietro a chi), xG/90, xA/90, gol e assist, giornate saltate, calendario. Le righe in cui uno dei due è meglio sono evidenziate, e sotto c'è il verdetto in chiaro ("Meglio Thuram: +0,67 pt/g attesi… Però Pulisic crea più assist attesi: xA/90 0,29 contro 0,12"). Serve per sciogliere un dubbio secco senza dover impostare uno scambio.
+
+## Cosa è cambiato dall'ultimo aggiornamento
+
+`refresh_data.py` confronta il database nuovo con quello precedente e scrive `app/changes.json`: chi è salito e sceso di fantamedia (con il prima e il dopo), chi ha cambiato squadra, chi è entrato o uscito dal listone. L'app lo mostra in cima alla scheda **Report**. Se non c'è nulla da segnalare il riquadro non compare — niente rumore.
+
 ## Come valuta uno scambio (in breve)
 
 1. **Punti attesi a giornata** di ogni giocatore:
@@ -76,7 +84,7 @@ dentro `sw.js` (in `build.py`) per forzare l'aggiornamento della cache. In alter
 ### Pubblica una volta, poi si aggiorna da solo
 
 Se lo metti su GitHub Pages, il workflow `.github/workflows/aggiorna-pubblica.yml` è già pronto:
-ogni lunedì riscarica le statistiche, ricompila l'app e ripubblica. Passi una volta sola:
+ogni martedì riscarica le statistiche, ricompila l'app e ripubblica. Passi una volta sola:
 
 1. crea un repository con tutti i file del progetto;
 2. *Settings → Pages → Source: GitHub Actions*;
@@ -100,12 +108,22 @@ app/
   ui.html            markup
   data.json          603 giocatori: ruolo, squadra, QA/QI/FVM ufficiali, statistiche 2026/27,
                      storico stagioni e ultime 6 partite
+  changes.json       cosa è cambiato nell'ultimo aggiornamento (salite, discese, trasferimenti)
+  extra_snapshot.json ultima copia buona dei dati avanzati (xG/xA), usata se le fonti sono giù
+  avail.json         indisponibili di oggi, diffidati e probabili formazioni, fusi nei dati a ogni
+                     build: NON tocca data.json, che viene riscritto dagli altri script
+  consensus.json     fantamedia secondo FantaPazz/Gazzetta/CdS (mediana e distanza), idem
   context.json       calendario 38 giornate, forza offensiva/difensiva delle 20 squadre
   leagues.json       leghe importate dagli export di Fantacalcio.it (rose + crediti spesi)
 import_fantacalcio.py  converte gli export CSV delle rose in app/leagues.json
 build.py             ricompila fantatrade.html partendo da app/
 refresh_data.py      riscarica quotazioni e statistiche e ricompila
-fetch_extra.py       scarica i dati avanzati (xG, tiri) da solo e li importa
+fetch_extra.py       scarica i dati avanzati (xG, tiri) da solo e li importa (Understat → FotMob)
+fetch_avail.py       scarica indisponibili, diffidati e probabili formazioni (app/avail.json)
+fetch_consensus.py   fantamedia secondo tre testate da FantaPazz (app/consensus.json)
+verifica_leghe.py    confronta le rose incorporate con gli export CSV (crediti compresi)
+import_crediti.py    scrive in leagues.json i crediti residui veri (da crediti-residui.csv)
+validate_xg.py       verifica sui dati reali se xG/90 prevede meglio di gol/90
 import_extra.py      import manuale di xG/infortuni da CSV o JSON
 aggiorna.sh          i tre passaggi in fila, tollerante agli errori (per cron/launchd)
 .github/workflows/   aggiornamento settimanale automatico su GitHub (Actions)
@@ -113,17 +131,17 @@ aggiorna.sh          i tre passaggi in fila, tollerante agli errori (per cron/la
 
 ### Aggiornare i dati (automatico, una volta a settimana)
 
-Non serve fare niente a mano. L'aggiornamento gira **da solo ogni martedì alle 8:00**:
+Non serve fare niente a mano. L'aggiornamento gira **da solo ogni martedì alle 8:00** (martedì e non lunedì: il lunedì c'è spesso il posticipo):
 
 - se il progetto è su GitHub, lo fa `.github/workflows/aggiorna-pubblica.yml` (tab **Actions** → *Run workflow* per forzarlo ora), e ripubblica anche l'app su Pages;
 - se lo tieni solo in locale, lo fa `aggiorna.sh` lanciato da cron:
 
 ```bash
 crontab -e
-0 8 * * 2  cd /percorso/di/fantatrade && ./aggiorna.sh >> aggiorna.log 2>&1
+0 8 * * 2  cd /percorso/di/fantatrade && ./aggiorna.sh >> aggiorna.log 2>&1   # martedì
 ```
 
-`aggiorna.sh` fa in fila `refresh_data.py` → `fetch_extra.py` → `build.py` e **non si ferma se una fonte è giù**: se Understat non risponde, i dati avanzati restano quelli di prima e l'app si costruisce lo stesso. Per sapere com'è la situazione senza toccare niente: `./aggiorna.sh --check`.
+`aggiorna.sh` fa in fila `refresh_data.py` → `fetch_extra.py` → `fetch_avail.py` → `fetch_consensus.py` → `build.py` e **non si ferma se una fonte è giù**: se Understat non risponde, i dati avanzati restano quelli di prima e l'app si costruisce lo stesso. Per sapere com'è la situazione senza toccare niente: `./aggiorna.sh --check`.
 
 A mano, se serve:
 
@@ -162,7 +180,17 @@ La fantamedia proiettata somma voto atteso + bonus attesi, entrambi compressi ve
 attesa = (1 - prospettiva) * fantamedia_fatta + prospettiva * fantamedia_proiettata
 ```
 
-La **prospettiva** è uno slider in alto (default 65% futuro; 0% = solo dato di fatto, 100% = solo proiezione): muovendolo si ricalcolano punti attesi, giudizi, offerte e classifica. Effetto tipico sui dati attuali: Varela (9 gol in 10 partite) scende da 8,57 a 8,06 di proiezione, un attaccante a secco con 7 di media voto sale.
+La **prospettiva** non è più un cursore libero: in alto ci sono **tre scelte**, quelle che hanno senso sui dati veri. Cambiando scelta si ricalcolano punti attesi, giudizi, offerte, undici consigliato e classifica.
+
+| Scelta | Peso | Quando |
+|---|---|---|
+| **Ha fatto** | 50% previsto / 50% già fatto | vuoi premiare chi sta rendendo adesso |
+| **Equilibrio** (default) | 65% / 35% | stagione in corso, il caso normale |
+| **Proiezione** | 78% / 22% | sospetti che la classifica menta (nuovi arrivi, cambio di ruolo, tanti xG e pochi gol) |
+
+Perché solo tre: sotto il 30% il modello ignora il contesto, sopra l'85% smette di guardare il campionato, e la differenza tra un 62% e un 68% è rumore che nessuno può giustificare. La media dei punti non cambia (6,24 → 6,27 da 0% a 100%): cambia **chi sta in cima** — tra 50% e 85%, 257 giocatori su 283 con almeno 300 minuti cambiano posizione e 50 si spostano di oltre dieci posti. Sui dati attuali: con "Proiezione" Varela (9,55 di fantamedia reale) scende a 7,94 e smette di essere il più forte, mentre Kolo Muani (5,86 con tanti tiri) sale a 6,80.
+
+Il valore resta nello stato salvato: chi aveva un valore diverso se lo ritrova, con la scritta **"personalizzata"** accanto alla percentuale esatta e la scelta più vicina evidenziata (la vecchia manopola si può ancora guidare da console con `Model.setProspect(0.6)`, ma non è più esposta).
 
 ## Calendario: forza delle squadre e peso della prossimità
 
@@ -227,17 +255,22 @@ Due dati che il listone non ha e che cambiano le previsioni: **quanto tira** un 
 
 | dato | fonte | come |
 |---|---|---|
-| xG / npxG / tiri / tiri in porta | **Understat** | una sola pagina per lega (`/league/Serie_A/<anno>`), i dati sono in un JSON dentro l'HTML (`playersData`) |
+| xG / npxG / tiri / tiri in porta | **Understat** (prima scelta) | una sola pagina per lega (`/league/Serie_A/<anno>`), i dati sono in un JSON dentro l'HTML (`playersData`) |
+| xG / xA / tiri / tiri in porta | **FotMob** (riserva automatica) | endpoint pubblici, nessuna chiave: `api/data/leagues?id=55` → `data.fotmob.com/stats/55/season/<id>/expected_goals.json` |
 | idem (alternativa) | **FBref** | tabella *Shooting* → *Share & Export → CSV*; gli script diretti vengono bloccati (403), l'export manuale funziona |
 | storico infortuni | **Transfermarkt** | pagina *Verletzungen* del giocatore: tipo, da/a, giorni fuori |
 | storico infortuni (alternativa) | i tuoi appunti / Transfermarkt per squadra | basta un CSV con i giorni fuori |
 
 ### Come si importa
 
-**xG: automatico.** `fetch_extra.py` legge la pagina Understat della Serie A, estrae il blocco `playersData` (JSON dentro l'HTML), tiene chi ha almeno 180 minuti e abbina per **cognome + squadra**, con l'iniziale quando serve (`Konè M.` ↔ `Manu Koné`). Nomi senza iniziale nel listone (`Pulisic`, `Krstovic`) vengono riconosciuti lo stesso; i doppi cognomi (`Kevin Carlos`) sono provati in tutte le forme. Chi resta fuori **non viene indovinato**: finisce in `app/extra_report.txt` e si sistema una volta sola con un `sid` esplicito in `import_extra.py`.
+**xG: automatico, con due fonti.** `fetch_extra.py` prova in ordine Understat → FotMob → CSV di FBref e si ferma alla prima che risponde; se nessuna risponde, rimette i numeri dell'ultima settimana buona da `app/extra_snapshot.json` (che il workflow committa insieme ai dati). Basta questo: nessun passaggio a mano.
+
+*Understat*: legge la pagina Understat della Serie A, estrae il blocco `playersData` (JSON dentro l'HTML), tiene chi ha almeno 180 minuti e abbina per **cognome + squadra**, con l'iniziale quando serve (`Konè M.` ↔ `Manu Koné`). Nomi senza iniziale nel listone (`Pulisic`, `Krstovic`) vengono riconosciuti lo stesso; i doppi cognomi (`Kevin Carlos`) sono provati in tutte le forme. Chi resta fuori **non viene indovinato**: finisce in `app/extra_report.txt` e si sistema una volta sola con un `sid` esplicito in `import_extra.py`.
 
 ```bash
-python3 fetch_extra.py                        # scarica, importa, ricompila
+python3 fetch_extra.py                        # scarica (Understat, poi FotMob), importa, ricompila
+python3 fetch_extra.py --source fotmob        # forza una fonte precisa
+python3 validate_xg.py                        # xG/90 batte gol/90? (usa la storia del repository)
 python3 fetch_extra.py --dry-run              # mostra gli abbinamenti, non scrive
 python3 fetch_extra.py --source fbref_csv --file shooting.csv   # CSV esportato da FBref
 python3 fetch_extra.py --from-file pagina.html                  # file già scaricato
@@ -266,6 +299,8 @@ L'identificativo è `sid` (l'id Fantacalcio, la chiave affidabile: sta in `app/d
 
 **xG → bonus proiettato.** `xgBonusPerMatch` calcola i bonus attesi dai tiri (`xG/90 × 3 + assist/90 × 1` × quota minuti) e `projectedFm` lo miscela al bonus dei gol veri con peso `CFG.W_XG = 0,45`, ridotto da un fattore di fiducia basato sui minuti. Effetto su dati di prova: Malen (8 gol con 5,0 di xG) scende da 8,33 a 8,27; Kvernadze (3 gol con 5,2 di xG) sale da 7,25 a 7,33. Il `projection()` esistente continua a dire "in crescita / in calo" ma ora con un motivo che non è solo il prezzo.
 
+**xA → bonus assist.** Come per i gol, anche gli assist vengono mediati con gli assist attesi: `xgBonusPerMatch` calcola gli assist per 90 e li miscela con `xA/90` con peso `CFG.W_XA = 0,45` (ridotto per chi ha pochi minuti). Chi ha 2 assist ma 1,0 di xA viene frenato; chi ha 0 assist con 2,2 di xA viene considerato. Nel profilo del giocatore compare "2 assist con 1,0 di xA" quando la differenza è di almeno 0,8.
+
 **Infortuni → disponibilità attesa.** `injuryProfile` divide i giorni fuori (ultime due stagioni) per 730: ne esce `perGw`, la percentuale di giornate che quel giocatore ha passato ai box. In `playProb` questo prior **può solo abbassare** la disponibilità calcolata su questa stagione (`K_INJ = 0,35`), mai alzarla: chi ha già giocato tanto non diventa più affidabile perché due anni fa stava bene. Chi si è fermato 42 giorni in due stagioni si vede scritto *"42 giorni fuori in 2 stagioni (2 episodi)"* e, sopra il 15%, una riga nei *contro* dello scambio.
 
 **Dove si vedono:** colonne `xG/90`, `Gol−xG`, `Rischio inf.` nella scheda Giocatori (compaiono **solo** se i dati ci sono), riga di profilo nella tabella di confronto degli scambi, riga nei *contro* quando la fragilità è alta.
@@ -274,9 +309,87 @@ L'identificativo è `sid` (l'id Fantacalcio, la chiave affidabile: sta in `app/d
 
 Con i dati veri va rifatto quello che abbiamo fatto per voto e bonus (split-half): la fantamedia delle giornate successive è prevista meglio da `xG/90` o da `gol/90`? Se il guadagno non c'è, `W_XG` va abbassato. Stessa logica per `K_INJ`: se il prior sugli infortuni peggiora la previsione di disponibilità, va a zero.
 
-**Cadenza:** xG ogni settimana insieme a `refresh_data.py` (automatico); infortuni a inizio stagione e a gennaio. **Regola:** se i campi mancano, restano nulli e l'app non mostra nulla — nessun numero stimato senza fonte.
+**Riconoscimenti mancati:** i nomi che nessuna regola prende finiscono in `app/extra_report.txt`. Per sistemarne uno una volta sola basta `app/alias.json`: `{"Nome Nella Fonte": 1234}`, dove 1234 è lo `sid` Fantacalcio. La settimana dopo viene riconosciuto senza toccare il codice. (Stato attuale: 330 giocatori abbinati su 333 con almeno 180 minuti; i 3 mancanti sono nomi troncati dalla fonte, es. "Valde" per Valdepeñas.)
 
-**Perché non tutto da solo:** le fonti gratuite che non bloccano gli script sono poche. Understat è l'unica affidabile per gli xG, e ogni tanto sparisce (nell'estate 2026 la pagina di lega era un segnaposto "We will come back soon"): per questo la pipeline ha tre livelli — fetch diretto, CSV esportato a mano, dati precedenti che restano in piedi — e in nessun caso la build si rompe.
+**Validazione automatica (`validate_xg.py`):** il repository committa `app/data.json` ogni settimana, quindi la sua storia è già una serie temporale. Lo script rilegge le versioni da git, calcola per ogni giocatore xG/90 e gol/90 di una settimana e i fantapunti per partita guadagnati nelle settimane successive, e dice quale dei due predittori funziona meglio e quale peso conviene nella miscela. Con meno di due settimane di storico risponde semplicemente "serve aspettare": non inventa nulla.
+
+**Cadenza:** xG, indisponibili e probabili formazioni ogni settimana (automatico: martedì tutto, venerdì solo indisponibili e formazioni, che cambiano durante la settimana); storico infortuni a inizio stagione e a gennaio. **Regola:** se i campi mancano, restano nulli e l'app non mostra nulla — nessun numero stimato senza fonte.
+
+**Perché non tutto da solo:** le fonti gratuite che non bloccano gli script sono poche. Understat ogni tanto sparisce (nell'estate 2026 la pagina di lega era un segnaposto "We will come back soon"): per questo la pipeline ha quattro livelli — Understat, FotMob, CSV esportato a mano, copia dell'ultima settimana buona — e in nessun caso la build si rompe. Per gli infortuni **di oggi** invece c'è: il sito di Fantacalcio.it serve le pagine in HTML semplice, e `fetch_avail.py` le legge senza browser (stessa cosa per le probabili formazioni). Resta a mano solo lo **storico** infortuni — giorni fuori nelle due stagioni precedenti — perché chi tiene quel conto (Transfermarkt) blocca gli script: sono due dati diversi, uno dice *se adesso è fermo*, l'altro *quanto spesso si ferma*.
+
+## Chi è fuori adesso: indisponibili e probabili formazioni
+
+Il listone dice quanto un giocatore *ha fatto*; non dice se **adesso** è in infermeria. `fetch_avail.py` legge due pagine del sito di Fantacalcio.it, che sono HTML semplice (niente JavaScript: si leggono con `urllib` + `BeautifulSoup`) e scrive `app/avail.json`. `build.py` lo fonde nei dati a ogni compilazione, quindi `data.json` resta com'è e nessuno script si pesta i piedi.
+
+| Cosa | Pagina | Cosa se ne ricava |
+|---|---|---|
+| Indisponibili (1ª fonte) | fantacalcio.it `/indisponibili-serie-a` | 20 schede squadra, dentro infortunati e squalificati: nome (già in formato listone), motivo, e la frase del rientro quando c'è (*"rientro dalla seconda metà di dicembre"*) |
+| Indisponibili (2ª fonte) | pianetafanta.it `/indisponibili-fantacalcio` | 86 righe con **"Rientro: 13ª giornata"** (63 casi) e la durata (*"2 settimane"*, *"6 mesi"*): un numero esatto al posto di una frase da interpretare. Include anche i casi *"Incerto"* / *"In Dubbio"*, che l'altra fonte non elenca |
+| Probabili formazioni | `/probabili-formazioni-serie-a` | modulo e undici probabile con la **percentuale per giocatore**, più la panchina. Il link di ogni giocatore contiene l'id Fantacalcio: l'abbinamento col listone è esatto |
+
+**Come entra nell'app**
+
+- Le due liste vengono **unite per `sid`**: di Fantacalcio.it tengo la descrizione lunga e la squadra, di PianetaFanta la giornata di rientro; 53 giocatori compaiono in entrambe, 31 solo su PianetaFanta, 16 solo su Fantacalcio.it (dati del 19/11/2026: **100 indisponibili**, 84 letti su PianetaFanta).
+- `p.fuori` (`infortunio` | `squalifica` | `dubbio`), `p.fuoriPerche`, `p.fuoriRientro`, `p.fuoriGiorni`. In `playProb()` lo stop pesa **quanto dura**: la frase del rientro ("rientro dalla fine di novembre", "da marzo", "out nel prossimo turno") viene tradotta in giorni (`out_days()`), e la probabilità di giocare diventa `base × (1 − (1 − K_FUORI) × quota di stagione saltata)`, con `quota = giorni / giorni che mancano` (pavimento `K_FUORI = 0,06` per chi non torna più; se il sito non dice quando rientra, metà del tempo rimasto). Così chi salta una settimana vale quasi come uno sano e chi salta mezzo campionato quasi zero — senza inventare date che la fonte non dà. E siccome ci passa tutto (verdetto, offerte, undici, classifica proiettata), l'effetto si vede ovunque senza altri agganci.
+- Colonna **Stato** nella tabella Giocatori (bollino `FUORI`, motivo e prognosi al passaggio del mouse) e card **Indisponibili adesso** in cima alla scheda: prima i giocatori delle tue leghe, poi tutti gli altri squadra per squadra.
+- Nello scambio, chi ricevi e risulta fuori finisce **in cima ai *contro***, con motivo e periodo di rientro.
+- `p.titolarita` = percentuale di partire titolare secondo le probabili formazioni → colonna **Titolare** e nota nel profilo. **Non entra nel modello**: è un pronostico sulla prossima giornata, mentre i punti attesi proiettano l'intera stagione; mescolarli conterebbe due volte la stessa cosa. Resta un'informazione in più, che è esattamente ciò che mancava.
+- **`dubbio`** (i *"Incerto"* / *"In Dubbio"* di PianetaFanta): il giocatore è nei guai ma non è detto che salti la giornata → `P(gioca) × 0,6` (`CFG.K_DUBBIO`), bollino ambra **IN DUBBIO** invece di `FUORI`.
+- Lo stato manuale (✓ / ! / ✕) resta più forte: se sai che un giocatore gioca, la tua parola batte la fonte (il bollino rosso resta visibile, ma i punti attesi tornano su).
+
+**Un buco nei dati trovato strada facendo.** Confrontando le fonti è saltato fuori che nel nostro `data.json` 7 giocatori con 11 presenze avevano 0-4 minuti giocati (Mandas, De Gea, Bijlow, Palmisani, Ferguson, Delprato, Dragusin): un errore della fonte che azzerava il loro `Min%`. Con quei minuti il modello non sbagliava solo la probabilità di giocare: `projectedFm()` finiva al tetto di **10,5** e i due centrocampisti diventavano i più forti del listone. Ora la correzione è a monte, in `build.py`: se le presenze da titolare (`tit`) dicono ≥ 70% e i minuti dicono < 15%, `min` viene ricostruito da `pres × 90 × 0,9` e il giocatore resta marcato `minStimati` (7 corretti). `minuteShare()` ha anche una guardia in più nel modello, per non fidarsi mai dei minuti quando sono incompatibili con le presenze.
+
+**Abbinamento dei nomi:** i nomi degli indisponibili sono già in formato listone (`Kristensen T.`, `Miranda J.`), quindi si usano le stesse chiavi di `fetch_extra._listone_keys` (cognome + iniziale) dentro la squadra della scheda. Se il listone ha due omonimi nella stessa squadra si usa il ruolo citato nel testo (`il portiere`, `il difensore`…); se resta ambiguo il giocatore si salta, invece di attribuire l'infortunio a quello sbagliato. Stato attuale: **69 voci lette, 69 abbinate**, 0 sbagliate.
+
+## Crediti: cosa sono e cosa non sono
+
+L'app usa i crediti in tre punti diversi, e vale la pena non confonderli:
+
+| Numero | Da dove viene | Si può sbagliare? |
+|---|---|---|
+| **Crediti spesi per ogni giocatore** | export rose di Fantacalcio.it (`Squadra,id,crediti`), abbinati per **id ufficiale** | no, se il file è quello giusto: è copiato |
+| **Crediti che restano a ogni squadra** | budget di lega − somma degli spesi | sì: dipende dal **budget**, che non sta nell'export |
+| **Crediti per pareggiare uno scambio** | stima del modello (~55 cr per punto a giornata, corretta per livello) | no: è una stima, non un prezzo |
+
+Il budget è la parte fragile. `import_fantacalcio.py` lo stima dalla spesa mediana (arrotondata a 250, minimo 500) e nella scheda **Lega** si può correggere a mano. Prima lo stesso calcolo mancava all'import fatto **dentro l'app**: quelle leghe nascevano con budget 0 e i residui venivano calcolati su un 500 fisso di ripiego — una lega da 1000 mostrava metà dei crediti. Ora il budget viene dedotto anche lì.
+
+**Gli scambi spostano i crediti insieme ai giocatori.** Su Fantacalcio.it, quando uno scambio va a buon fine, il giocatore passa all'altra squadra **con il suo prezzo**: la squadra che lo riceve si ritrova una rosa "più cara" di quanto abbia davvero speso, e il conto `budget − somma dei prezzi` smette di essere il residuo vero (è così che una squadra arriva a 1188 su un budget di 1000). Per questo:
+
+- accanto ai crediti di ogni squadra nella scheda **Lega** c'è un **campo**: ci scrivi il residuo che leggi su Fantacalcio.it e da quel momento i conguagli usano quello (campo vuoto = torna al calcolo automatico). Il valore viene salvato insieme alla lega;
+- se **reimporti** l'export aggiornato (dopo gli scambi), le rose vengono sostituite ma **budget, crediti dichiarati e "la mia squadra" restano** — l'import riconosce la lega dallo stesso nome invece di duplicarla.
+
+Chi ha speso più del budget e non ha un valore dichiarato viene segnalato con **⚠** e il conto vero nel tooltip, non schiacciato a "0 cr".
+
+**Scrivere i crediti veri in un colpo solo:** riempi la colonna `crediti_residui_veri` di `crediti-residui.csv` (una riga per squadra, `stima_attuale` è solo di riferimento) e lancia `python3 import_crediti.py --rebuild`: scrive i valori in `app/leagues.json` e ricompila. Per tornare alla stima: `python3 import_crediti.py --reset`. Alla fine stampa un **controllo di conservazione** per lega — prezzi delle rose + crediti residui deve dare *squadre × budget*: se non torna, c'è un numero digitato male o un prezzo mancante nell'export (quando torna, i due numeri si validano a vicenda).
+
+**Controllo rapido:** `python3 verifica_leghe.py` confronta `app/leagues.json` con gli export CSV in `uploads/`, giocatore per giocatore (crediti compresi), stampa spesa e residuo di ogni squadra e segnala se le posizioni nel listone non puntano più ai giocatori giusti. Esce con codice 1 se trova qualcosa. Le rose sono salvate **anche con gli id ufficiali** (`sids`/`paidSid`), così un riordino del listone non fa finire i prezzi sul giocatore sbagliato.
+
+## La formazione consigliata della giornata
+
+Nella scheda **Report**, in cima, c'è l'undici che l'app schiererebbe adesso nel tuo modulo (`bestLineup()` in `app/model.js`).
+
+- Il criterio è **solo la prossima giornata**: `gwPoints(p) = P(titolare) marcata × fantamedia attesa + (1 − P(titolare)) × 6`. `P(titolare)` è la percentuale delle probabili formazioni quando c'è, altrimenti `playProb()`. Chi è **indisponibile** oggi non parte titolare (`CFG.OUT_START = 0,12`: al massimo entra), chi è **in dubbio** ha mezzo posto (`DUBBIO_START = 0,45`), chi è **diffidato** paga un piccolo rischio.
+- Sotto l'undici c'è la **panchina in ordine di ingresso**: prima il portiere di riserva, poi per punti attesi.
+- Se in un reparto non hai abbastanza giocatori l'app scrive **"ti mancano 1 difensore"** invece di riempire il buco con un altro ruolo.
+- Attenzione a non confondere i due numeri: l'undici della giornata vale ~74 pt, il riepilogo sotto (punti attesi della stagione) ~75 — sono due misure diverse, la prima è "domenica", la seconda "da qui a maggio".
+
+**Perché non usa i punti stagionali:** quelli servono a valutare uno scambio (quanto vale un giocatore nei prossimi mesi), questi a scegliere chi mettere in campo sabato. Sono due domande diverse e hanno pesi diversi: la titolarità di una giornata non dice niente sul valore di mercato, e viceversa.
+
+## Indice di schierabilità (0-100)
+
+Colonna **Schier.** in Giocatori, funzione `schierabilita(p, profile)`: `0,6 × P(gioca) + 0,4 × titolarità`, poi corretta dai fatti della settimana — fuori (×0,15), in dubbio (×0,8), ballottaggio (×0,85), diffidato (×0,97), mai visto (×0,7). È un indice di **lettura**, non entra nei punti attesi: pesare due volte le stesse informazioni è il modo più elegante di sbagliare. L'idea viene dagli "indici di schierabilità" di TuttoFantacalcio, che però li pubblicano solo a parole in un articolo per giornata; qui il numero è per giocatore e si può ordinare.
+
+## Fantamedia secondo tre testate
+
+`fetch_consensus.py` legge `/fantacalcio/statistiche` di **FantaPazz**, che pubblica la fantamedia calcolata su tre pagelle: FantaPazz, Gazzetta dello Sport e Corriere dello Sport. Di ogni giocatore salviamo i tre valori, la **mediana** e la **distanza** (`spread`), in `app/consensus.json`.
+
+- Colonna **Testate**: la mediana. Nel tooltip i tre valori e l'eventuale divergenza.
+- Il numero diventa **viola** quando le testate sono distanti (`spread ≥ 0,7`) o quando la mediana si allontana di almeno 0,5 dalla fantamedia che usiamo: è il segnale che quel voto è volatile, e che pagarlo caro in uno scambio è più rischioso di quanto dica la media.
+- Controllo incrociato utile: sulle 462 schede abbinate la distanza media fra la nostra fantamedia e la mediana delle tre testate è **0,16** — cioè le due fonti si confermano — mentre i casi che si scostano di oltre mezzo punto sono quasi sempre dati rotti (vedi sotto).
+
+## Diffidati
+
+Pagina `/squalificati-e-diffidati-campionato-serie-a` di Fantacalcio.it, letta insieme agli indisponibili: chi è a un'ammonizione dalla squalifica prende `p.diffidato`, il simbolo **⚠** nella colonna Stato e la nota "diffidato" nell'undici consigliato. Non è un'indisponibilità: è un rischio che si paga la giornata dopo. (19/11/2026: 4 diffidati, 2 squalificati.)
 
 ## Titolarità, ballottaggi, "panchinaro di chi"
 
@@ -362,8 +475,18 @@ A stagione in corso il prezzo pagato ad agosto non è un argomento: chi ha pagat
 | Listone, ruoli, squadre, QI/QA/FVM | Fantacalcio.it (listone ufficiale 2026/27, 603 giocatori) |
 | Presenze, minuti, gol, assist, voto, fantamedia, storico stagioni, ultime 6 partite | fantacalcio.dev |
 | Calendario 38 giornate e gol fatti/subiti per squadra | astafantacalcio.com (pagine calendario e classifica) |
+| **Indisponibili di oggi** (infortunati e squalificati, con motivo e rientro previsto) | Fantacalcio.it `/indisponibili-serie-a` + PianetaFanta `/indisponibili-fantacalcio` (uniti per `sid`) |
+| **Probabili formazioni** (modulo e % di titolarità, panchina compresa) | Fantacalcio.it, `/probabili-formazioni-serie-a` |
+| **Diffidati e squalificati** | Fantacalcio.it, `/squalificati-e-diffidati-campionato-serie-a` |
+| **Fantamedia secondo tre testate** (FantaPazz, Gazzetta, CdS) | Fantapazz, `/fantacalcio/statistiche` |
+| xG, xA, tiri per 90 | Understat → FotMob (fallback automatico), o CSV di FBref |
+| Storico infortuni (giorni fuori nelle ultime due stagioni) | import manuale da CSV (`import_extra.py`), due volte l'anno |
 
 - I dati sono **incorporati** nel file: per un aggiornamento automatico serve un piccolo backend (cron settimanale che esegue `refresh_data.py` e ripubblica la pagina).
+
+## Cose da fare
+
+Le cose decise e non ancora fatte stanno in **[`TODO.md`](TODO.md)**, con la data in cui vanno fatte. In cima c'è una sola voce rossa: le **fasce d'asta**, da implementare prima dell'asta iniziale (fine luglio) e prima dell'asta di riparazione (gennaio) — a stagione in corso non servono, ma vanno fatte in quel periodo e non vanno dimenticate.
 
 ## Se vuoi trasformarlo in un vero sito
 
@@ -371,6 +494,6 @@ Tre passi, in ordine di utilità:
 
 1. **Ospitare questa pagina** così com'è (Netlify, GitHub Pages, Cloudflare Pages): è un solo file statico, zero costi.
 2. **Automatizzare i dati**: spostare `refresh_data.py` su un cron/GitHub Action settimanale che rigenera `fantatrade.html` e lo pubblica. A quel punto l'app è sempre aggiornata senza toccare nulla.
-3. **Aggiungere le cose che spostano davvero l'ago**: infortuni/squalifiche (API tipo API-Football), probabili formazioni, import delle rose reali delle tue leghe (incollando il testo si fa già). Le leghe mantra restano fuori scope per scelta.
+3. ~~Infortuni/squalifiche e probabili formazioni~~: **fatto**, arrivano da soli dal sito di Fantacalcio.it (vedi *Indisponibili di oggi*). Resta fuori scope, per scelta, il mantra.
 
 Il modello è già isolato in `app/model.js` proprio per poterci attaccare questi pezzi senza riscrivere l'interfaccia.
