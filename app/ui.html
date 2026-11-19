@@ -122,6 +122,7 @@
   <!-- ============ REPORT ============ -->
   <section class="tab" id="tab-report">
     <div id="changesCard"></div>
+    <div id="lineupCard"></div>
     <div id="reportTop"></div>
 
     <div class="panel" style="margin:16px 0 12px">
@@ -210,6 +211,9 @@
           <th data-key="xg90" class="col-adv" title="Gol attesi per 90 minuti (xG senza rigori): la misura più stabile della pericolosità">xG/90</th>
           <th data-key="fin" class="col-adv" title="Gol fatti meno gol attesi: sopra zero sta finalizzando meglio del previsto (destinato a calare), sotto zero il contrario">Gol−xG</th>
           <th data-key="injr" class="col-inj" title="Quota di giornate perse per infortunio nelle ultime due stagioni, dallo storico">Rischio inf.</th>
+          <th data-key="schier" class="col-sch" title="Indice di schierabilità 0-100: probabilità di giocare, titolarità della prossima giornata e fatti della settimana (fuori, in dubbio, diffidato). Passa il mouse per il dettaglio">Schier.</th>
+          <th data-key="cons" class="col-cons" title="Fantamedia secondo tre testate (FantaPazz, Gazzetta, Corriere dello Sport): mediana. Se le tre litigano fra loro il voto è volatile">Testate</th>
+          <th data-key="quotaD" class="col-quota" title="Quotazione attuale e variazione dell'ultima settimana: chi sale è richiesto sul mercato, chi scende viene venduto">Quota</th>
           <th data-key="prof" title="Titolare fisso / in ballottaggio / riserva, e chi gli contende il posto">Profilo</th>
           <th data-key="cal">Calendario</th>
         </tr></thead>
@@ -222,7 +226,10 @@
       <span><b>Pt/g</b> = punti attesi a giornata (fantamedia, titolarità, calendario)</span>
       <span><b>Profilo</b> = titolare fisso / in ballottaggio (con chi) / riserva (dietro a chi), dai minuti e dai compagni di ruolo</span>
       <span><b>xG/90 · Gol−xG · Rischio inf.</b> compaiono solo se hai importato i dati avanzati (<code>python3 import_extra.py</code>)</span>
-      <span><b>Stato</b> = <span class="out-badge">FUORI</span> se oggi è indisponibile (infortunio o squalifica) secondo Fantacalcio.it; <b>Titolare</b> = probabilità di partire dall'inizio nella prossima giornata</span>
+      <span><b>Schier.</b> = indice 0-100 di quanto è schierabile adesso (probabilità di giocare + titolarità + infortuni, squalifiche, diffide)</span>
+      <span><b>Testate</b> = fantamedia secondo FantaPazz, Gazzetta e Corriere dello Sport (mediana) — <span class="cons-vol">in viola</span> quando le tre non sono d'accordo</span>
+      <span><b>Quota</b> = quotazione attuale e variazione dell'ultima settimana (<span style="color:var(--green)">↑</span> sale, <span style="color:var(--red)">↓</span> scende)</span>
+      <span><b>Stato</b> = <span class="out-badge">FUORI</span> se oggi è indisponibile (infortunio o squalifica), <span class="out-badge dub">IN DUBBIO</span> se è nei guai ma senza tempi certi — da Fantacalcio.it e PianetaFanta; <b>Titolare</b> = probabilità di partire dall'inizio nella prossima giornata</span>
       <span><b>Sopra rincalzo</b> = quanto vale più del miglior giocatore libero di quel ruolo</span>
       <span><b>Forma</b> = distanza dalla fantamedia attesa</span>
       <span><b>Proiez.</b> = quanto è destinato a fare (voto atteso + bonus compressi sul ruolo)</span>
@@ -243,7 +250,7 @@
       <ul>
         <li><b>fantamedia</b>: quella reale della stagione 2026/27, "compressa" verso l'attesa iniziale se i minuti giocati sono pochi (chi ha giocato 2 partite non è un fenomeno);</li>
         <li><b>attesa iniziale</b>: dedotta dalla quotazione ufficiale con una curva stimata sui dati di quest'anno, diversa per ruolo. Serve solo per chi ha pochi minuti giocati: chi ha giocato tanto è giudicato dai fatti;</li>
-        <li><b>P(gioca)</b>: mix tra continuità di presenze (presenze / giornate) e minutaggio reale (minuti giocati / 90 per presenza). Uso i minuti al posto del campo "partite da titolare" perché nelle fonti disponibili quel dato è incoerente.</li>
+        <li><b>P(gioca)</b>: mix tra continuità di presenze (presenze / giornate) e minutaggio reale (minuti giocati / 90 per presenza). Uso i minuti al posto del campo "partite da titolare" perché nelle fonti disponibili quel dato è incoerente — con una guardia: se un giocatore ha tante presenze da titolare ma quasi zero minuti (capita a qualche portiere nella fonte), credo alle presenze e non ai minuti.</li>
       </ul>
 
       <h3>2. Il "rincalzo" e la scarsità di ruolo</h3>
@@ -259,11 +266,19 @@
       <h3>Chi è fuori adesso, e chi gioca davvero</h3>
       <p>Due informazioni che nessun listone contiene, e che FantaTrade prende <b>da sola</b> dal sito di Fantacalcio.it:</p>
       <ul>
-        <li><b>gli indisponibili di oggi</b>: infortunati e squalificati della Serie A, con il motivo e — quando il sito lo scrive — il periodo di rientro (<i>"rientro dalla seconda metà di dicembre"</i>). Chi risulta fuori viene pesato per <b>quanto dura lo stop</b>: se la prognosi dice "rientro dalla fine di novembre" perde una giornata e mezzo, se dice "rientro da aprile" perde due terzi della stagione che resta. Il conto lo fa la frase del rientro: <code>P(gioca) × (1 − 0,94 × quota di stagione saltata)</code>, con un pavimento al 6% per chi non torna più. Senza indicazioni di rientro uso metà del tempo rimasto — prudente, e dichiarato. Nella scheda Giocatori compare la colonna <b>Stato</b> con il bollino <span class="out-badge">FUORI</span> (passa il mouse: c'è la prognosi).</li>
+        <li><b>gli indisponibili di oggi</b>: infortunati e squalificati della Serie A, con il motivo e — quando il sito lo scrive — il periodo di rientro (<i>"rientro dalla seconda metà di dicembre"</i>). Da PianetaFanta arriva anche il <b>numero della giornata di rientro</b> (<i>"Rientro: 13ª giornata"</i>): quando c'è, è quello che uso, perché non va interpretato. Chi risulta fuori viene pesato per <b>quanto dura lo stop</b>: se la prognosi dice "rientro dalla fine di novembre" perde una giornata e mezzo, se dice "rientro da aprile" perde due terzi della stagione che resta. Il conto lo fa la frase del rientro: <code>P(gioca) × (1 − 0,94 × quota di stagione saltata)</code>, con un pavimento al 6% per chi non torna più. Senza indicazioni di rientro uso metà del tempo rimasto — prudente, e dichiarato. Nella scheda Giocatori compare la colonna <b>Stato</b> con il bollino <span class="out-badge">FUORI</span> (passa il mouse: c'è la prognosi).</li>
         <li><b>le probabili formazioni</b>: per ogni squadra il modulo e, per ogni giocatore, la <b>percentuale di partire titolare</b>; quella dei giocatori in panchina. Diventa la colonna <b>Titolare</b>.</li>
       </ul>
       <p>In cima alla scheda <b>Giocatori</b> c'è la card <b>Indisponibili adesso</b>: prima i giocatori delle tue leghe, poi tutti gli altri squadra per squadra, con motivo e rientro previsto. E se in uno scambio ricevi uno che è fuori, la prima riga dei <i>contro</i> te lo dice con la sua prognosi — non serve accorgersene da soli guardando i numeri.</p>
+      <p>Le due liste (Fantacalcio.it e PianetaFanta) vengono <b>unite</b>: chi c'è in entrambe ha la descrizione di uno e la data dell'altro. Chi è segnato <b>“Incerto”</b> o <b>“In Dubbio”</b> prende il bollino ambra <span class="out-badge dub small">IN DUBBIO</span> e una penalità più leggera (gioca al 60% del suo valore, perché il malanno c'è ma la giornata potrebbe giocarla).</p>
       <p>Le due cose restano <b>separate</b>, di proposito: l'indisponibilità è un fatto e corregge i punti attesi; la percentuale di titolarità è un pronostico sulla prossima giornata, quindi resta un'informazione in più e non entra nel modello, che proietta l'intera stagione. Lo stato che imposti tu a mano (✓ / ! / ✕) ha comunque la precedenza su tutto.</p>
+
+      <h3>La formazione consigliata della giornata</h3>
+      <p>Nella scheda <b>Report</b>, in cima, c'è l'undici che schiererei adesso nel tuo modulo: per ogni ruolo scelgo i giocatori con più <b>punti attesi nella prossima giornata</b>, cioè <code>P(titolare) × fantamedia attesa + (1 − P(titolare)) × 6</code>. La differenza rispetto ai punti attesi della stagione è che qui conta solo la domenica: se le probabili formazioni danno un giocatore all'80% e un altro al 55%, gioca l'80%, anche se l'altro ha una fantamedia migliore. Chi risulta <b>indisponibile</b> non parte titolare (al massimo entra), chi è <b>in dubbio</b> ha mezzo posto, chi è <b>diffidato</b> paga un piccolo rischio di salto della giornata dopo.</p>
+      <p>Sotto l'undici c'è la <b>panchina in ordine di ingresso</b> (prima il portiere di riserva, poi i più forti), e se in un reparto non hai abbastanza giocatori l'app te lo dice invece di inventare.</p>
+
+      <h3>Indice di schierabilità (0-100)</h3>
+      <p>La colonna <b>Schier.</b> nella scheda Giocatori è la sintesi di "lo metto o no": probabilità di giocare (60%) e titolarità delle probabili formazioni (40%), corretta dai fatti della settimana — fuori (×0,15), in dubbio (×0,8), ballottaggio (×0,85), diffidato (×0,97). Serve a ordinare e a spiegare: passando il mouse vedi da dove esce il punteggio. Non entra nei punti attesi, che hanno già i loro pesi: un indice che pesa due volte le stesse cose è un modo elegante per sbagliare.</p>
 
       <h3>4. Il calendario: chi ha le prossime partite facili</h3>
       <p>Per ogni squadra di Serie A stimo <b>quanto attacca</b> e <b>quanto concede</b>, dai gol fatti e subiti. Con 11 giornate un 4-0 falsa tutto, quindi i due tassi vengono <b>compattati verso la media del campionato</b> (peso k = 6 partite): a inizio stagione conta molto la media, a fine stagione solo quello che è successo davvero.</p>
@@ -320,6 +335,12 @@
          ● <b>storico infortuni</b>: giorni fuori nelle ultime due stagioni → percentuale di giornate a rischio. Può solo <i>abbassare</i> la disponibilità, mai alzarla. Compare la colonna <b>Rischio inf.</b> e, sopra il 15%, una riga nei <i>contro</i> dello scambio.</p>
       <p>L'<b>xG si aggiorna da solo</b> insieme al resto dei dati (una volta a settimana): <code>fetch_extra.py</code> prova le fonti in ordine (Understat → FotMob → CSV di FBref), abbina i nomi per cognome e squadra, e segnala in <code>extra_report.txt</code> chi non ha riconosciuto — senza indovinare. Se una settimana <i>tutte</i> le fonti sono giù, i numeri dell'ultima settimana buona restano al loro posto. Lo <b>storico infortuni</b> (giorni fuori nelle due stagioni precedenti) è invece l'unico pezzo che si importa a mano, due volte l'anno (<code>python3 import_extra.py mio_file.csv</code>, formato in <code>extra_template.csv</code>: <code>sid</code> oppure nome + squadra), perché i siti che tengono quel conto (Transfermarkt in testa) bloccano gli script. Non è la stessa cosa degli <b>indisponibili di oggi</b>, che arrivano da soli dal sito di Fantacalcio.it: quello storico serve a stimare <i>quanto spesso</i> un giocatore si ferma, l'altro dice <i>se adesso è fermo</i>. Ambigui e non trovati si saltano e si stampano: meglio un buco che un dato attribuito al giocatore sbagliato. Senza dati importati l'app funziona esattamente come prima — nessun numero inventato.</p>
 
+      <h3>La fantamedia secondo tre testate</h3>
+      <p>La fantamedia che muove i punti attesi viene da una fonte sola. FantaPazz pubblica la stessa statistica su tre pagelle diverse — <b>FantaPazz, Gazzetta dello Sport, Corriere dello Sport</b> — e FantaTrade le legge tutte e tre: la colonna <b>Testate</b> mostra la mediana, e il tooltip i tre valori. Quando le tre sono distanti fra loro (o quando litigano con la nostra fonte) il numero diventa <span class="cons-vol">viola</span>: è l'avviso che quel voto è volatile, e che pagarlo tanto in uno scambio è più rischioso di quanto dica la media. Sulla Serie A 2026/27 le tre testate distano in media 0,31 di fantamedia, e la mediana sta a 0,16 dalla nostra fonte: le due cose si controllano a vicenda.</p>
+
+      <h3>Diffidati</h3>
+      <p>Chi ha quattro ammonizioni è a un giallo dalla squalifica: nella colonna <b>Stato</b> compare <b>⚠</b> e nell'undici consigliato la nota "diffidato". Non è un'indisponibilità — è un rischio che si paga la giornata <i>dopo</i>, ed è il tipo di cosa che sfugge quando si guardano solo i punti.</p>
+
       <h3>Confronto diretto tra due giocatori</h3>
       <p>Nella scheda <b>Giocatori</b>, in alto, ci sono due caselle: scrivi due nomi e vedi il confronto riga per riga — <b>punti attesi a giornata</b>, minuti, profilo (titolare / ballottaggio / dietro a chi), tiri attesi, assist, fragilità, calendario. Le righe migliori sono evidenziate e in fondo c'è il verdetto scritto in chiaro: <i>"Meglio Malen: +0,9 pt/g attesi. Ma è in ballottaggio con X: se perde il posto scende verso Y."</i> Serve per decidere un dubbio secco, senza passare per uno scambio.</p>
 
@@ -363,7 +384,7 @@
       </ul>
 
       <h3>Fonti dei dati</h3>
-      <p><b>Listone e quotazioni</b>: listone ufficiale 2026/27 di Fantacalcio.it (603 giocatori, con quotazione iniziale QI, quotazione attuale QA e FVM). <b>Statistiche</b>: fantacalcio.dev, stagione 2026/27 (presenze, minuti, gol, assist, media voto, fantamedia), con le ultime 6 partite e lo storico delle fantamedie delle stagioni precedenti. <b>Calendario</b>: Serie A 2026/27 dalla 12ª giornata, con gol fatti/subiti per stimare la forza delle squadre. <b>xG, xA e tiri</b>: Understat e FotMob (Serie A 2026/27), aggiornati in automatico ogni settimana. <b>Indisponibili e probabili formazioni</b>: Fantacalcio.it (<code>/indisponibili-serie-a</code> e <code>/probabili-formazioni-serie-a</code>), letti in automatico il martedì e il venerdì. Dati aggiornati al __DATA_DATE__.</p>
+      <p><b>Listone e quotazioni</b>: listone ufficiale 2026/27 di Fantacalcio.it (603 giocatori, con quotazione iniziale QI, quotazione attuale QA e FVM). <b>Statistiche</b>: fantacalcio.dev, stagione 2026/27 (presenze, minuti, gol, assist, media voto, fantamedia), con le ultime 6 partite e lo storico delle fantamedie delle stagioni precedenti. <b>Calendario</b>: Serie A 2026/27 dalla 12ª giornata, con gol fatti/subiti per stimare la forza delle squadre. <b>xG, xA e tiri</b>: Understat e FotMob (Serie A 2026/27), aggiornati in automatico ogni settimana. <b>Indisponibili e diffidati</b>: Fantacalcio.it (<code>/indisponibili-serie-a</code> e <code>/squalificati-e-diffidati-campionato-serie-a</code>) e PianetaFanta (<code>/indisponibili-fantacalcio</code>), uniti per avere descrizione e giornata di rientro. <b>Fantamedia delle tre testate</b>: FantaPazz (<code>/fantacalcio/statistiche</code>). <b>Probabili formazioni</b>: Fantacalcio.it (<code>/probabili-formazioni-serie-a</code>). Tutti letti in automatico il martedì e il venerdì. Dati aggiornati al __DATA_DATE__.</p>
       <p style="color:var(--dim);font-size:12.5px">Prototipo: i dati sono incorporati nel file e non si aggiornano da soli (lo script <code>refresh_data.py</code> li riscarica e ricompila la pagina in un comando).</p>
     </div>
   </section>

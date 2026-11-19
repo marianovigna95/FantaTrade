@@ -556,7 +556,7 @@
         '<span class="mark">✓</span>' +
         '<span class="badge ' + p.r + '">' + p.r + '</span>' +
         '<span style="min-width:0"><span class="nm">' + esc(p.n) + '</span> <span class="tm">' + esc(p.t) + '</span>' +
-          (p.fuori ? ' <span class="out-badge small" title="' + esc(outTitle(id)) + '">FUORI</span>' : '') + '</span>' +
+          fuoriBadge(id) + '</span>' +
         '<span class="avail ' + (state.avail[id] || '') + '" data-avail="' + id + '" title="Stato: clicca per cambiare (disponibile → in dubbio → out)">' +
           (state.avail[id] === 'out' ? '✕' : state.avail[id] === 'dubbio' ? '!' : '✓') + '</span>' +
         (function () {
@@ -641,7 +641,8 @@
     // fuori / probabile titolare vengono prima del profilo: contano piu' di tutto il resto
     var out = [];
     var fuori = M.outNote(POOL[id]);
-    if (fuori) out.push(fuori.tipo === 'squalificato' ? 'squalificato' : 'fuori (infortunio)');
+    if (fuori) out.push(fuori.tipo === 'squalificato' ? 'squalificato'
+      : fuori.tipo === 'dubbio' ? 'in dubbio' : 'fuori (infortunio)');
     var lu = M.starterProb(POOL[id]);
     if (lu != null) out.push('titolare ' + Math.round(lu * 100) + '%');
     var sp = profileOf(id); if (!sp) return out.join(' · ');
@@ -677,7 +678,8 @@
           'i punti attesi qui sopra sono già mediati su questo, non sono quelli di quando rientra.';
       }
       return {
-        t: esc(POOL[id].n) + (fuori.tipo === 'squalificato' ? ' è squalificato' : ' è fuori (infortunio)'),
+        t: esc(POOL[id].n) + (fuori.tipo === 'squalificato' ? ' è squalificato'
+          : fuori.tipo === 'dubbio' ? ' è in dubbio' : ' è fuori (infortunio)'),
         d: (fuori.text || 'Indisponibile secondo Fantacalcio.it.') + quando +
           ' I punti attesi qui sopra scontano già lo stop (probabilità di giocare al ' +
           Math.round(M.playProb(POOL[id]) * 100) + '%): se rientra prima valgono di più, ' +
@@ -1181,10 +1183,14 @@
     }, 30);
   }
 
-  // bollino FUORI da mettere accanto a un nome, ovunque compaia
+  // bollino dello stato (FUORI / SQUAL. / IN DUBBIO) da mettere accanto a un nome, ovunque compaia
   function fuoriBadge(id) {
-    if (!POOL[id] || !POOL[id].fuori) return '';
-    return ' <span class="out-badge small" title="' + esc(outTitle(id)) + '">FUORI</span>';
+    var p = POOL[id];
+    if (!p || !p.fuori) return '';
+    var n = M.outNote(p) || {};
+    var cls = n.tipo === 'dubbio' ? ' dub' : '';
+    var txt = n.tipo === 'dubbio' ? 'IN DUBBIO' : n.tipo === 'squalificato' ? 'SQUAL.' : 'FUORI';
+    return ' <span class="out-badge' + cls + ' small" title="' + esc(outTitle(id)) + '">' + txt + '</span>';
   }
 
   function chip(id) {
@@ -1251,6 +1257,66 @@
       });
     });
     return out;
+  }
+
+  /* ---------- formazione consigliata della giornata ---------- */
+  function renderLineup() {
+    var box = $('#lineupCard');
+    if (!box) return;
+    var ids = (R('A') || []).slice();
+    if (!ids.length) { box.style.display = 'none'; return; }
+    box.style.display = '';
+    var info = (typeof window !== 'undefined' && window.FANTATRADE_AVAIL) || {};
+    var lu = M.bestLineup(POOL, ids, state.formation);
+    var gwTxt = info.giornata ? ' · giornata ' + info.giornata : '';
+    var nomiRuolo = { P: 'portiere', D: 'difensori', C: 'centrocampisti', A: 'attaccanti' };
+
+    function riga(x, idx) {
+      var p = POOL[x.id], x2 = M.schierabilita(p, M.starterProfile(POOL, x.id));
+      var st = M.starterProb(p);
+      var n = M.outNote(p);
+      var extra = [];
+      if (st != null) extra.push(Math.round(st * 100) + '% titolare');
+      if (n) extra.push(n.tipo === 'dubbio' ? 'in dubbio' : n.tipo === 'squalificato' ? 'squalificato' : 'fuori');
+      if (p.diffidato) extra.push('diffidato');
+      var sp = M.starterProfile(POOL, x.id);
+      if (sp && sp.rival) extra.push('ballottaggio con ' + POOL[sp.rival.id].n);
+      return '<li' + (n ? ' class="risky"' : '') + '>' +
+        '<span class="lu-n">' + (idx != null ? idx + '.' : '') + '</span>' +
+        '<span class="badge ' + p.r + '">' + p.r + '</span>' +
+        '<span class="lu-name">' + esc(p.n) + fuoriBadge(x.id) + ' <span class="dim">' + esc(p.t) + '</span></span>' +
+        '<span class="lu-tags">' + esc(extra.join(' · ')) + '</span>' +
+        '<span class="lu-pts" title="punti attesi della giornata: titolarità × fantamedia attesa">' + fmt(x.pts, 2) + '</span>' +
+        '<span class="lu-sch ' + (x2.score >= 75 ? 'pos' : x2.score >= 45 ? 'neu' : 'neg') + '" title="' + esc(schierTitle(x.id)) + '">' + x2.score + '</span>' +
+        '</li>';
+    }
+
+    box.innerHTML = '<div class="panel lineup">' +
+      '<div class="toolbar" style="margin:0 0 8px">' +
+        '<h2 style="margin:0">Formazione consigliata: ' + esc(state.formation) + gwTxt + '</h2>' +
+        '<span class="grow"></span>' +
+        '<span class="dim" style="font-size:12px">' + fmt(lu.tot, 2) + ' pt attesi nella giornata</span>' +
+      '</div>' +
+      '<p class="hint" style="margin:0 0 8px">Chi schierare adesso, secondo i dati della giornata: <b>probabili formazioni</b> (colonna % titolare), indisponibili, ballottaggi e punti attesi. Non tiene conto delle tue preferenze: se un giocatore è dato al 55% e uno al 90%, mette il secondo.</p>' +
+      (lu.missing.length
+        ? '<p class="lu-warn">Ti mancano ' + lu.missing.map(function (m) {
+            return m.n + ' ' + nomiRuolo[m.r] + (m.n > 1 ? '' : '');
+          }).join(', ') + ' per riempire il ' + esc(state.formation) + ': l\'undici qui sotto è incompleto.</p>' : '') +
+      '<ul class="lu-xi">' +
+        ['P', 'D', 'C', 'A'].map(function (r) {
+          var g = lu.xi.filter(function (x) { return x.r === r; });
+          if (!g.length) return '';
+          return '<li class="lu-group">' + nomiRuolo[r] + '</li>' + g.map(function (x, k) { return riga(x, k + 1); }).join('');
+        }).join('') +
+      '</ul>' +
+      (lu.panchina.length
+        ? '<details class="lu-bench"><summary>Panchina, in ordine di ingresso (' + lu.panchina.length + ')</summary><ul class="lu-xi">' +
+            lu.panchina.map(function (x) { return riga(x, null); }).join('') + '</ul></details>'
+        : '') +
+      ((info.fuori || info.diffidati)
+        ? '<p class="hint" style="margin:8px 0 0">Considerati ' + (info.fuori || 0) + ' indisponibili e ' + (info.diffidati || 0) + ' diffidati del sito, aggiornati al ' +
+            (info.data ? info.data.split('-').reverse().join('/') : '—') + '. In <b>panchina</b> chi entra se qualcuno salta.</p>' : '') +
+      '</div>';
   }
 
   function renderReport() {
@@ -1804,10 +1870,45 @@
     return { tipo: n.tipo, text: perche, rientro: n.rientro, giorni: p.fuoriGiorni };
   }
 
+  function schierTitle(i) {
+    var p = POOL[i], x = M.schierabilita(p, M.starterProfile(POOL, i));
+    var bits = ['schierabilità ' + x.score + '/100'];
+    var st = M.starterProb(p);
+    if (st != null) bits.push('probabile titolare ' + Math.round(st * 100) + '%');
+    else bits.push('P(gioca) ' + Math.round(M.playProb(p) * 100) + '%');
+    if (x.why.length) bits.push(x.why.map(function (w) {
+      return /^ballottaggio con \d+$/.test(w) ? 'ballottaggio con ' + esc(POOL[+w.split(' ').pop()].n) : w;
+    }).join(', '));
+    return bits.join(' · ');
+  }
+
+  function consTitle(i) {
+    var c = M.consensus(POOL[i]);
+    if (!c) return 'Nessun dato dalle tre testate';
+    var t = (window.FANTATRADE_CONSENSUS || {}).testate || ['FantaPazz', 'Gazzetta', 'Corriere'];
+    var parts = c.values.map(function (v, k) { return (t[k] || '') + ' ' + fmt(v, 2); });
+    var out = parts.join(' · ') + ' → mediana ' + fmt(c.med, 2);
+    if (c.spread >= 0.7) out += ' · le testate non sono d\'accordo (±' + fmt(c.spread, 2) + ')';
+    if (c.delta != null && Math.abs(c.delta) >= 0.5) {
+      out += ' · attenzione: la nostra fonte dice ' + fmt(POOL[i].fm, 2) + ' (' + sgn(c.delta) + ')';
+    }
+    return out;
+  }
+
+  function quotaTitle(i) {
+    var p = POOL[i];
+    if (p.qa == null) return 'Quotazione non disponibile';
+    var out = 'Quotazione attuale ' + Math.round(p.qa);
+    if (p.prev != null) out += ' · settimana scorsa ' + Math.round(p.prev) + ' (' + (p.qa - p.prev > 0 ? '+' : '') + Math.round(p.qa - p.prev) + ')';
+    if (p.qi != null) out += ' · a inizio stagione ' + Math.round(p.qi) + ' (' + (p.qa - p.qi > 0 ? '+' : '') + Math.round(p.qa - p.qi) + ')';
+    return out;
+  }
+
   function outTitle(i) {
     var p = POOL[i], fuori = outBody(p);
     if (!fuori.tipo) return '';
-    var t = fuori.tipo === 'squalificato' ? 'Squalificato' : 'Fuori per infortunio';
+    var t = fuori.tipo === 'squalificato' ? 'Squalificato'
+      : fuori.tipo === 'dubbio' ? 'In dubbio (indisponibile, tempi da definire)' : 'Fuori per infortunio';
     if (fuori.text) t += ': ' + fuori.text;
     if (fuori.rientro) t += ' — ' + fuori.rientro;
     if (fuori.giorni != null) t += ' (circa ' + Math.max(1, Math.round(fuori.giorni / 7)) + ' giornate)';
@@ -1845,7 +1946,8 @@
       '<div class="toolbar" style="margin:0 0 8px">' +
         '<h2 style="margin:0">Indisponibili adesso</h2>' +
         '<span class="grow"></span>' +
-        '<span class="dim" style="font-size:12px">' + fuori.length + ' giocatori · fantacalcio.it' + dataTxt + '</span>' +
+        '<span class="dim" style="font-size:12px">' + fuori.length + ' giocatori · ' +
+          esc(info.fonte || 'fantacalcio.it') + dataTxt + '</span>' +
       '</div>' +
       (miei.length
         ? '<p class="avail-mine"><b>' + miei.length + '</b> dei tuoi: ' + miei.map(function (i) {
@@ -1861,8 +1963,8 @@
               byTeam[t].map(function (i) {
                 var p = POOL[i], fuori = outBody(p);
                 return '<li class="' + (mine[i] ? 'mine' : inLega[i] ? 'inlega' : '') + '"><b>' + esc(p.n) + '</b>' +
-                  ' <span class="avail-tag ' + (fuori.tipo === 'squalificato' ? 'sq' : 'inf') + '">' +
-                  (fuori.tipo === 'squalificato' ? 'squalifica' : 'infortunio') + '</span>' +
+                  ' <span class="avail-tag ' + (fuori.tipo === 'squalificato' ? 'sq' : fuori.tipo === 'dubbio' ? 'dub' : 'inf') + '">' +
+                  (fuori.tipo === 'squalificato' ? 'squalifica' : fuori.tipo === 'dubbio' ? 'in dubbio' : 'infortunio') + '</span>' +
                   (fuori.rientro ? ' <span class="avail-when">' + esc(fuori.rientro) + '</span>' : '') +
                   (fuori.text ? '<div class="avail-why">' + esc(fuori.text) + '</div>'
                               : '<div class="avail-why dim">Il sito non dice altro.</div>') + '</li>';
@@ -1888,6 +1990,11 @@
         fin: (function (a) { return a && a.finishing != null ? a.finishing : null; })(M.advStats(p)),
         injr: (function (j) { return j ? j.perGw : -1; })(M.injuryProfile(p)),
         fuori: p.fuori ? 1 : 0,
+        schier: (function (x) { return x.score; })(M.schierabilita(p, M.starterProfile(POOL, i))),
+        schierWhy: (function (x) { return x.why; })(M.schierabilita(p, M.starterProfile(POOL, i))),
+        cons: (function (c) { return c ? c.med : -1; })(M.consensus(p)),
+        consVol: (function (c) { return c && c.volatile ? 1 : 0; })(M.consensus(p)),
+        quotaD: (function (c) { return p.qa == null ? -99 : (p.prev != null ? p.qa - p.prev : 0); })(),
         titol: (function (l) { return l == null ? -1 : l; })(M.starterProb(p)),
         prof: (function (sp) {
           return sp.label === 'titolare fisso' ? 4 : sp.label === 'titolare in ballottaggio' ? 3 :
@@ -1911,7 +2018,7 @@
       var formCls = r.form > 0.25 ? 'pos' : r.form < -0.25 ? 'neg' : 'neu';
       return '<tr><td><span class="badge ' + r.r + '">' + r.r + '</span></td>' +
         '<td class="nm">' + esc(r.n) + '</td><td style="color:var(--muted)">' + esc(r.t) + '</td>' +
-        '<td class="col-out">' + (r.fuori ? '<span class="out-badge" title="' + esc(outTitle(r.i)) + '">FUORI</span>' : '–') + '</td>' +
+        '<td class="col-out">' + (r.fuori ? fuoriBadge(r.i).trim() : (POOL[r.i].diffidato ? '<span class="diff-badge" title="Diffidato: un\'ammonizione e salta la giornata successiva">⚠</span>' : '–')) + '</td>' +
         '<td class="col-lu ' + (r.titol < 0 ? '' : r.titol >= 0.7 ? 'pos' : r.titol >= 0.4 ? 'neu' : 'neg') + '"' +
           ' title="' + (r.titol < 0 ? 'Nessuna indicazione dalle probabili formazioni' :
             r.titol > 0 ? 'Secondo le probabili formazioni di giornata parte titolare nel ' + Math.round(r.titol * 100) + '% dei casi' :
@@ -1929,6 +2036,11 @@
         '<td class="col-adv">' + (r.xg90 >= 0 ? fmt(r.xg90, 2) : '–') + '</td>' +
         '<td class="col-adv ' + (r.fin == null ? '' : r.fin > 0.8 ? 'neg' : r.fin < -0.8 ? 'pos' : '') + '">' + (r.fin == null ? '–' : sgn(r.fin)) + '</td>' +
         '<td class="col-inj ' + (r.injr < 0 ? '' : r.injr >= 0.15 ? 'neg' : '') + '">' + (r.injr < 0 ? '–' : Math.round(r.injr * 100) + '%') + '</td>' +
+        '<td class="col-sch ' + (r.schier >= 75 ? 'pos' : r.schier >= 45 ? 'neu' : 'neg') + '" title="' + esc(schierTitle(r.i)) + '">' + r.schier + '</td>' +
+        '<td class="col-cons ' + (r.cons < 0 ? '' : r.consVol ? 'cons-vol' : '') + '" title="' + esc(consTitle(r.i)) + '">' +
+          (r.cons < 0 ? '–' : fmt(r.cons, 2)) + '</td>' +
+        '<td class="col-quota ' + (r.quotaD > 0 ? 'pos' : r.quotaD < 0 ? 'neg' : 'neu') + '" title="' + esc(quotaTitle(r.i)) + '">' +
+          (POOL[r.i].qa == null ? '–' : Math.round(POOL[r.i].qa) + (r.quotaD > 0 ? ' ↑' + fmt(r.quotaD, 0) : r.quotaD < 0 ? ' ' + fmt(r.quotaD, 0) + ' ↓' : '')) + '</td>' +
         '<td class="' + (r.prof >= 4 ? 'pos' : r.prof <= 1 ? 'neg' : 'neu') + '" style="font-size:11.5px;white-space:nowrap" title="' + esc(profileNote(r.i)) + '">' +
           (r.prof >= 4 ? 'titolare' : r.prof >= 3 ? 'ballottaggio' : r.prof >= 2.5 ? 'a intermittenza' : r.prof >= 1.5 ? 'mezza partita' : r.prof >= 1 ? 'primo cambio' : r.prof >= 0.5 ? 'riserva' : 'mai visto') + '</td>' +
         '<td>' + (r.cal == null ? '–' : r.cal) + '</td></tr>';
@@ -2008,7 +2120,7 @@
       var stTxt = function (p) {
         var n = M.outNote(p);
         if (!n) return 'disponibile';
-        return n.tipo === 'squalificato' ? 'squalificato' : 'fuori';
+        return n.tipo === 'squalificato' ? 'squalificato' : n.tipo === 'dubbio' ? 'in dubbio' : 'fuori';
       };
       row('Stato di oggi', stTxt(A), stTxt(B), 0);
     }
@@ -2039,7 +2151,8 @@
       var p = POOL[k], fuori = M.outNote(p);
       if (!fuori) return;
       var rientro = fuori.rientro ? ' (' + fuori.rientro.charAt(0).toLowerCase() + fuori.rientro.slice(1) + ')' : '';
-      parts.push('<b>' + esc(p.n) + (fuori.tipo === 'squalificato' ? ' è squalificato</b>' : ' è fuori per infortunio</b>') +
+      parts.push('<b>' + esc(p.n) + (fuori.tipo === 'squalificato' ? ' è squalificato</b>'
+        : fuori.tipo === 'dubbio' ? ' è in dubbio</b>' : ' è fuori per infortunio</b>') +
         rientro + ': adesso la sua probabilità di giocare è al ' + Math.round(M.playProb(p) * 100) +
         '%, quindi i punti attesi valgono meno di quelli che ha fatto.');
     });
@@ -2120,6 +2233,9 @@
       document.body.classList.toggle('has-inj', f.inj);
       document.body.classList.toggle('has-out', f.out);
       document.body.classList.toggle('has-lu', f.lu);
+      var cons = 0;
+      for (var j = 0; j < POOL.length; j++) { if (POOL[j].fmCons != null) { cons = 1; break; } }
+      document.body.classList.toggle('has-cons', !!cons);
     })();
     M.setProspect(state.prospect);
     rateCache = null;
@@ -2133,6 +2249,7 @@
     if ($('#tab-players').classList.contains('active')) { renderPlayers(); renderCompare(); }
     renderChanges();
     if ($('#tab-league').classList.contains('active')) renderLeague();
+    renderLineup();
     if ($('#tab-report').classList.contains('active')) { renderReport(); renderOffers(false); }
     syncHeader();
   }

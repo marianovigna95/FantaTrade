@@ -36,6 +36,10 @@
     W_XA: 0.45,                    // idem per gli assist attesi (xA)
     BONUS_GOAL: 3,                 // bonus fantacalcio per gol
     BONUS_ASSIST: 1,               // bonus per assist
+    MIN_SANE: 0.15,                // sotto questa quota di minuti (con tanti "titolari") il dato della fonte è rotto
+    OUT_START: 0.12,               // chi è indisponibile oggi: per la prossima giornata parte quasi mai
+    DUBBIO_START: 0.45,            // chi è "incerto": può partire, ma non ci scommettere
+    K_DUBBIO: 0.6,                 // chi è fuori ma senza tempi certi ("incerto", "da valutare")
     K_FUORI: 0.06,                 // probabilita' di giocare di chi resta fuori tutta la stagione (pavimento)
     SEASON_GW: 38,                 // giornate del campionato, per tradurre i giorni di stop in giornate perse
     OUT_UNKNOWN_SHARE: 0.5,        // se il sito non dice quando rientra, ipotizzo meta' del tempo rimasto fuori
@@ -280,7 +284,13 @@
   // uso i minuti e non il campo "partite da titolare", che nelle fonti e' incoerente
   function minuteShare(p) {
     if (!num(p.pres)) return 0;
-    return Math.min(num(p.min) / (num(p.pres) * 90), 1);
+    var share = Math.min(num(p.min) / (num(p.pres) * 90), 1);
+    // guardia sui dati rotti della fonte: qualche portiere arriva con 11 presenze e
+    // 1-4 minuti giocati (visto confrontando le fonti sulla giornata 11: Mandas, De Gea,
+    // Bijlow...). Se le presenze da titolare dicono un'altra cosa, credo a quelle.
+    var titShare = num(p.pres) ? Math.min(1, num(p.tit) / num(p.pres)) : 0;
+    if (num(p.pres) >= 3 && share < CFG.MIN_SANE && titShare >= 0.7) share = 0.9;
+    return share;
   }
 
   /* ---------- storico infortuni (opzionale) ---------- */
@@ -312,7 +322,8 @@
   // indisponibilita' di oggi in una riga: "Fuori: lesione muscolare (rientro a dicembre)"
   function outNote(p) {
     if (!p || !p.fuori) return null;
-    var tipo = p.fuori === 'squalifica' ? 'squalificato' : 'fuori';
+    var tipo = p.fuori === 'squalifica' ? 'squalificato'
+      : p.fuori === 'dubbio' ? 'dubbio' : 'fuori';
     var perche = String(p.fuoriPerche || '').trim();
     var rientro = String(p.fuoriRientro || '').trim();
     if (/squalific/i.test(perche)) tipo = 'squalificato';
@@ -352,7 +363,10 @@
     // p.fuori = indisponibile ADESSO secondo il sito di Fantacalcio (infortunio o squalifica).
     // Non e' un pronostico: e' un fatto, quindi scende quasi a zero qualunque cosa dica lo storico.
     // ...ma se l'utente dice "certo" la sua parola vale piu' della fonte: sapra' lui
-    if (p.fuori && st !== 'certo') {
+    if (p.fuori === 'dubbio' && st !== 'certo') {
+      // "incerto" / "da valutare": è un malanno vero ma non è detto che salti la giornata
+      base = base * CFG.K_DUBBIO;
+    } else if (p.fuori && st !== 'certo') {
       // il peso dello stop dipende da QUANTO dura: chi rientra fra dieci giorni perde una giornata,
       // chi rientra ad aprile non vale quasi nulla. I giorni arrivano dalla frase del rientro.
       var restanti = Math.max(1, CFG.SEASON_GW - CFG.GW);          // giornate che mancano
@@ -363,6 +377,102 @@
       base = base * (1 - (1 - CFG.K_FUORI) * share);
     }
     return base;
+  }
+
+  // fantamedia secondo tre testate (FantaPazz): mediana e distanza fra le pagelle
+  function consensus(p) {
+    if (!p || p.fmCons == null) return null;
+    var vals = Array.isArray(p.fmTestate) ? p.fmTestate.filter(function (v) { return v != null; }) : [];
+    return {
+      med: num(p.fmCons),
+      spread: num(p.fmSpread),
+      values: vals,
+      // quanto la mediana delle testate si allontana dalla fantamedia che usiamo
+      delta: p.fm ? p.fmCons - p.fm : null,
+      // se le testate litigano fra loro (o con la nostra fonte) il voto è volatile
+      volatile: num(p.fmSpread) >= 0.7 || (p.fm && Math.abs(p.fmCons - p.fm) >= 0.5)
+    };
+  }
+
+  // probabilita' di essere in campo dal 1': le probabili formazioni parlano della PROSSIMA
+  // giornata, playProb() di tutta la stagione. Per la domenica conta la prima.
+  function startProb(p) {
+    var st = starterProb(p);
+    var pp = playProb(p);
+    if (st == null) return pp;
+    if (st <= 0) return Math.min(pp, 0.18);      // dato "in panchina": puo' comunque entrare
+    return Math.min(pp, st);
+  }
+
+  // probabilita' di partire titolare NELLA PROSSIMA giornata: chi oggi e' in infermeria non
+  // parte, anche se la prognosi dice che rientra "alla 12ª" (rientrare non vuol dire giocare)
+  function startProbNext(p) {
+    var s = startProb(p);
+    var n = outNote(p);
+    if (n) s = Math.min(s, n.tipo === 'dubbio' ? CFG.DUBBIO_START : CFG.OUT_START);
+    if (p.diffidato) s *= 0.97;
+    return Math.max(0, Math.min(1, s));
+  }
+
+  // punti attesi nella PROSSIMA giornata: chi parte titolare prende la fantamedia, chi no il 6
+  function gwPoints(p) {
+    var ps = startProbNext(p), f = expectedFm(p);
+    return ps * f + (1 - ps) * CFG.BASE_NO_PLAY;
+  }
+
+  // indice di schierabilita' 0-100: la sintesi di "lo metto o no domenica".
+  // Mette insieme la probabilita' di giocare, la titolarita' delle probabili formazioni e i
+  // fatti della settimana (fuori, in dubbio, diffidato, ballottaggio). Serve a ordinare e a
+  // spiegare, non entra nei punti attesi (che hanno gia' i loro pesi).
+  function schierabilita(p, profile) {
+    if (!p) return { score: 0, why: [] };
+    var why = [];
+    var pp = playProb(p), st = starterProb(p);
+    var s = st == null ? pp : (CFG.W_AVAIL * pp + (1 - CFG.W_AVAIL) * Math.max(st, 0));
+    var n = outNote(p);
+    if (n) {
+      if (n.tipo === 'dubbio') { s *= 0.8; why.push('in dubbio'); }
+      else { s *= 0.15; why.push(n.tipo === 'squalificato' ? 'squalificato' : 'fuori'); }
+    }
+    if (profile && profile.rival) { s *= 0.85; why.push('ballottaggio con ' + profile.rival.id); }
+    if (p.diffidato) { s *= 0.97; why.push('diffidato'); }
+    if (p.pres == null || num(p.pres) === 0) { s *= 0.7; why.push('mai visto'); }
+    return { score: Math.max(0, Math.min(100, Math.round(100 * s))), why: why };
+  }
+
+  // formazione consigliata per la prossima giornata: i migliori per ruolo nel modulo scelto
+  function bestLineup(pool, ids, formation) {
+    var slots = CFG.FORMATIONS[formation] || CFG.FORMATIONS['3-4-3'];
+    var byRole = { P: [], D: [], C: [], A: [] };
+    (ids || []).forEach(function (id) {
+      var p = pool[id];
+      if (p && byRole[p.r]) byRole[p.r].push(id);
+    });
+    Object.keys(byRole).forEach(function (r) {
+      byRole[r].sort(function (a, b) { return gwPoints(pool[b]) - gwPoints(pool[a]); });
+    });
+    var xi = [], panchina = [], missing = [];
+    CFG.ROLE_ORDER.forEach(function (r) {
+      var n = Math.min(slots[r] || 0, byRole[r].length);
+      for (var i = 0; i < n; i++) xi.push({ r: r, id: byRole[r][i], slot: i + 1, pts: gwPoints(pool[byRole[r][i]]) });
+      if (n < (slots[r] || 0)) missing.push({ r: r, n: (slots[r] || 0) - n });
+      byRole[r].slice(n).forEach(function (id) { panchina.push({ r: r, id: id, pts: gwPoints(pool[id]) }); });
+    });
+    // panchina: prima i portieri di riserva (se il titolare salta), poi per punti; in fondo
+    // chi non è schierabile adesso, che serve solo se proprio non c'è altro
+    function outRank(id) {
+      var n = outNote(pool[id]);
+      if (!n) return 0;
+      return n.tipo === 'dubbio' ? 1 : 2;
+    }
+    panchina.sort(function (a, b) {
+      var oa = outRank(a.id), ob = outRank(b.id);
+      if (oa !== ob) return oa - ob;
+      var pa = a.r === 'P' ? 1 : 0, pb = b.r === 'P' ? 1 : 0;
+      return pb - pa || b.pts - a.pts;
+    });
+    var tot = xi.reduce(function (t, x) { return t + x.pts; }, 0);
+    return { xi: xi, panchina: panchina, missing: missing, tot: tot, slots: slots, formation: formation };
   }
 
   // punteggio atteso per giornata: mix fra giocare (fantamedia) e non giocare (base),
@@ -965,6 +1075,12 @@
     injuryProfile: injuryProfile,
     outNote: outNote,
     starterProb: starterProb,
+    consensus: consensus,
+    startProb: startProb,
+    startProbNext: startProbNext,
+    gwPoints: gwPoints,
+    schierabilita: schierabilita,
+    bestLineup: bestLineup,
     starterProfile: starterProfile,
     bonusPer90: bonusPer90,
     absenceRate: absenceRate,

@@ -326,6 +326,7 @@ body:not(.has-lu) .col-lu{display:none}
 .out-badge{display:inline-block;padding:1px 6px;border-radius:5px;font-size:10px;font-weight:700;
   letter-spacing:.04em;background:rgba(255,107,107,.15);color:var(--red);border:1px solid rgba(255,107,107,.35)}
 .out-badge.small{font-size:9px;padding:0 4px;vertical-align:1px}
+.out-badge.dub{background:rgba(255,180,84,.15);color:var(--amber);border-color:rgba(255,180,84,.4)}
 .avail-card{margin-bottom:14px}
 .avail-mine{margin:0 0 8px;font-size:12.5px;line-height:1.7;color:var(--txt)}
 .avail-list summary{cursor:pointer;font-size:12px;color:var(--dim);padding:6px 0;
@@ -343,6 +344,7 @@ body:not(.has-lu) .col-lu{display:none}
 .avail-tag{font-size:9.5px;padding:1px 5px;border-radius:4px;font-weight:700;letter-spacing:.03em}
 .avail-tag.inf{background:rgba(255,107,107,.14);color:var(--red)}
 .avail-tag.sq{background:rgba(255,180,84,.14);color:var(--amber)}
+.avail-tag.dub{background:rgba(255,180,84,.1);color:var(--amber);opacity:.9}
 .avail-why{font-size:11px;color:var(--dim);margin-top:3px;line-height:1.45}
 .avail-why.dim{font-style:italic;opacity:.75}
 .avail-when{font-size:11.5px;color:var(--amber)}
@@ -376,3 +378,29 @@ body:not(.has-lu) .col-lu{display:none}
 .changes-grid li{color:var(--muted);overflow:hidden;text-overflow:ellipsis}
 .changes-grid li b{font-variant-numeric:tabular-nums}
 .changes-grid .dim{color:var(--dim)}
+
+/* ============ formazione consigliata di giornata ============ */
+.lineup{margin-bottom:14px}
+.lu-warn{margin:0 0 8px;font-size:12px;color:var(--amber)}
+.lu-xi{margin:0;padding:0;list-style:none}
+.lu-group{margin:10px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.lu-xi li:not(.lu-group){display:grid;grid-template-columns:22px 22px minmax(0,1fr) auto 52px 34px;
+  align-items:center;gap:8px;padding:5px 8px;border-radius:7px;background:var(--bg2);
+  border:1px solid var(--line);margin-bottom:4px;font-size:13px}
+.lu-xi li.risky{border-color:rgba(255,180,84,.4)}
+.lu-n{color:var(--dim);font-size:11px;text-align:right}
+.lu-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.lu-tags{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
+.lu-pts{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.lu-sch{text-align:center;font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.lu-bench summary{cursor:pointer;font-size:12px;color:var(--dim);padding:6px 0;list-style:none}
+.lu-bench summary::-webkit-details-marker{display:none}
+.lu-bench summary:before{content:"▸";display:inline-block;width:12px;transition:transform .15s}
+.lu-bench[open] summary:before{transform:rotate(90deg)}
+.diff-badge{display:inline-block;color:var(--amber);font-size:12px;cursor:help}
+.cons-vol{color:var(--violet)}
+body:not(.has-cons) .col-cons{display:none}
+@media (max-width:640px){
+  .lu-xi li:not(.lu-group){grid-template-columns:20px 20px minmax(0,1fr) 46px 30px}
+  .lu-tags{display:none}
+}
