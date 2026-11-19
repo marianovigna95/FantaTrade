@@ -1,13 +1,13 @@
 name: Aggiorna dati e pubblica
 
 # Pubblica una volta, poi i dati si aggiornano da soli.
-# - gira ogni lunedì mattina e su richiesta (tab Actions -> Run workflow)
+# - gira ogni martedì mattina e su richiesta (tab Actions -> Run workflow)
 # - riscarica quotazioni e statistiche, prova a scaricare gli xG, ricompila e ripubblica
 # - se una fonte è giù NON si rompe niente: i dati restano quelli di prima e il run resta verde
 
 on:
   schedule:
-    - cron: "0 6 * * 1"      # ogni lunedì alle 06:00 UTC (08:00 in Italia)
+    - cron: "0 6 * * 2"      # ogni martedì alle 06:00 UTC (08:00 in Italia), dopo il posticipo del lunedì
   workflow_dispatch:          # avvio manuale dal tab Actions
   push:
     branches: [main]
