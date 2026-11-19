@@ -148,3 +148,29 @@ fonte fotmob: 333 giocatori con almeno 180 minuti · abbinati 330 · non riconos
   non riconosciuti (primi 10): Valde (Fiorentina); Romano Floriani (Lazio); Pote (Fiorentina)
 aggiornati 330 giocatori · campi: shots=309, sot=260, xg=330
 ricompilo fantatrade.html …
+== 2026-11-19 16:13 refresh_data.py ==
+scritto fantatrade.html 438627 byte
+scritto dist/ (index.html, manifest.webmanifest, sw.js, icone, og.png, _headers, robots.txt)
+1/4 listone ufficiale fantacalcio.it…
+  listone ufficiale fantacalcio.it: 603 giocatori
+2/4 indice statistiche…
+  elenco statistiche: 2627 giocatori
+3/4 abbinamento…
+  abbinamento nomi: 575/603
+4/4 statistiche…
+  statistiche scaricate: 567
+  secondo tentativo su 37 candidati alternativi…
+  statistiche scaricate: 34
+  recuperati 15 giocatori
+  database finale: 603 giocatori (28 senza statistiche stagionali)
+  riepilogo cambiamenti: 0 in salita, 0 in discesa, 0 cambi di squadra
+  giornate giocate impostate a 11
+Fatto: fantatrade.html aggiornato.
+== 2026-11-19 16:15 fetch_extra.py ==
+scritto fantatrade.html 457929 byte
+scritto dist/ (index.html, manifest.webmanifest, sw.js, icone, og.png, _headers, robots.txt)
+! understat non disponibile: playersData non trovato nella pagina (sito cambiato o pagina di errore?)
+fonte fotmob: 333 giocatori con almeno 180 minuti · abbinati 330 · non riconosciuti 3
+  non riconosciuti (primi 10): Valde (Fiorentina); Romano Floriani (Lazio); Pote (Fiorentina)
+aggiornati 330 giocatori · campi: shots=309, sot=260, xa=330, xg=330
+ricompilo fantatrade.html …
