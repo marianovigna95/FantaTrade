@@ -20,6 +20,34 @@ data = json.load(open(APP / "data.json"))
 context = json.load(open(APP / "context.json"))
 leagues = json.load(open(APP / "leagues.json")) if (APP / "leagues.json").exists() else []
 changes = json.load(open(APP / "changes.json")) if (APP / "changes.json").exists() else None
+avail = json.load(open(APP / "avail.json")) if (APP / "avail.json").exists() else None
+
+# indisponibili di oggi e probabili formazioni: non stanno in data.json (che viene
+# riscritto a ogni aggiornamento) ma in avail.json, e vengono fusi qui dentro.
+AVAIL_INFO = None
+if avail:
+    fuori = {o["sid"]: o for o in avail.get("out", [])}
+    titolari = avail.get("lineup", {})
+    panchina = avail.get("bench", {})
+    n_out = n_lu = 0
+    for p in data:
+        sid = p.get("sid")
+        o = fuori.get(sid)
+        if o:
+            p["fuori"] = o.get("tipo") or "indisponibile"
+            p["fuoriPerche"] = o.get("motivo", "")
+            p["fuoriRientro"] = o.get("rientro", "")
+            p["fuoriGiorni"] = o.get("giorni")
+            n_out += 1
+        if str(sid) in titolari:
+            p["titolarita"] = titolari[str(sid)]
+            n_lu += 1
+        elif str(sid) in panchina:
+            p["titolarita"] = 0
+            p["inPanchina"] = True
+            n_lu += 1
+    AVAIL_INFO = {"data": avail.get("date", ""), "giornata": avail.get("gw"),
+                  "fuori": n_out, "titolari": n_lu, "fonte": avail.get("source", "fantacalcio.it")}
 import datetime
 DATA_DATE = datetime.date.fromtimestamp((APP / "data.json").stat().st_mtime).strftime("%d/%m/%Y")
 css = (APP / "styles.css").read_text()
@@ -176,6 +204,7 @@ window.FANTATRADE_DATA = {json.dumps(data, ensure_ascii=False, separators=(',', 
 window.FANTATRADE_CTX = {json.dumps(context, ensure_ascii=False, separators=(',', ':'))};
 window.FANTATRADE_LEAGUES = {json.dumps(leagues, ensure_ascii=False, separators=(',', ':'))};
 window.FANTATRADE_CHANGES = {json.dumps(changes, ensure_ascii=False, separators=(',', ':'))};
+window.FANTATRADE_AVAIL = {json.dumps(AVAIL_INFO, ensure_ascii=False, separators=(',', ':'))};
 </script>
 <script>
 {model}

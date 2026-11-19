@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Aggiorna FantaTrade in un colpo solo: quotazioni/statistiche -> xG -> ricompila.
+# Aggiorna FantaTrade in un colpo solo: quotazioni/statistiche -> xG -> indisponibili/formazioni -> ricompila.
 # Pensato per cron o launchd: non si ferma se una fonte è giù, scrive tutto in aggiorna.log.
 #
 #   ./aggiorna.sh            aggiornamento completo
@@ -25,6 +25,12 @@ if [ "${1:-}" = "--check" ]; then
   $PY import_extra.py --report
   $PY - <<'EOF'
 import json, pathlib, datetime as dt
+a = pathlib.Path("app/avail.json")
+if a.exists():
+    av = json.loads(a.read_text())
+    print(f"  avail.json: {len(av.get('out', []))} indisponibili, {len(av.get('lineup', {}))} titolarità, dal {av.get('date')}")
+else:
+    print("  avail.json: assente (indisponibili e probabili formazioni non ancora scaricati)")
 f = pathlib.Path("app/data.json")
 d = json.loads(f.read_text())
 ts = dt.datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
@@ -45,7 +51,12 @@ $PY refresh_data.py --min-price 0 || { echo "!! refresh_data.py fallito: tengo i
 echo "-- fetch_extra.py"
 $PY fetch_extra.py || { echo "!! fetch_extra.py fallito: tengo i dati precedenti"; rc=1; }
 
-# 3. ricompila l'app a file singolo (idempotente)
+# 3. indisponibili di oggi e probabili formazioni (fantacalcio.it). Non tocca data.json:
+#    scrive app/avail.json, che build.py incorpora. Se il sito è giù restano quelli di prima.
+echo "-- fetch_avail.py"
+$PY fetch_avail.py --no-build || { echo "!! fetch_avail.py fallito: tengo gli indisponibili precedenti"; rc=1; }
+
+# 4. ricompila l'app a file singolo (idempotente)
 echo "-- build.py"
 $PY build.py || { echo "!! build.py fallito"; rc=2; }
 
