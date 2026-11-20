@@ -287,3 +287,17 @@ fantapazz: pagina scaricata
 righe lette da fantapazz: 482
 abbinati: 462 · non riconosciuti 14 · primi: Milinkovic (NAP); Floriani (LAZ); Rodriguez (TOR); Grandu (CAG); Sarr Pape M. (JUV); Galazzi (?); Kouda (?); Fanne (VEN)
 scritto consensus.json: 462 giocatori con tre fantamedie
+== 2026-11-20 16:24 fetch_avail.py ==
+indisponibili: pagina scaricata
+probabili formazioni: pagina scaricata
+indisponibili (pianetafanta): pagina scaricata
+diffidati: pagina scaricata
+indisponibili: 96 abbinati · 82 letti su pianetafanta (32 solo lì) · non riconosciuti 20
+probabili formazioni: 20 squadre · 220 titolari · 240 in panchina · giornata 12
+  non riconosciuti (primi 10): Dossena (Como); Grandu (Cagliari); Sulev (Cagliari); Sugamele (Cagliari); Borbei (Lecce); Konate A. (Parma); Arena A. (Roma); Lieto (Napoli); Melnyk (Napoli); Pereyra M. (Napoli)
+scritto avail.json: 96 fuori · 220 titolari con % · 4 diffidati
+== 2026-11-20 16:24 fetch_consensus.py ==
+fantapazz: pagina scaricata
+righe lette da fantapazz: 482
+abbinati: 462 · non riconosciuti 14 · primi: Milinkovic (NAP); Floriani (LAZ); Rodriguez (TOR); Grandu (CAG); Sarr Pape M. (JUV); Galazzi (?); Kouda (?); Fanne (VEN)
+scritto consensus.json: 462 giocatori con tre fantamedie
