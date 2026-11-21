@@ -478,8 +478,10 @@
     }
   }
 
-  function loadLeagues(list) {
-    state.leagues = list.map(function (L) {
+  // costruisce le leghe incorporate nel file (export di Fantacalcio.it) senza assegnarle:
+  // serve sia all'avvio sia al riallineamento con le leghe nuove del sito
+  function leaguesFromSeed(list) {
+    return (list || []).map(function (L) {
       var paid = {};
       Object.keys(L.paid || {}).forEach(function (k) { paid[+k] = L.paid[k]; });
       var teams = (L.teams || []).map(function (t) {
@@ -517,6 +519,10 @@
       if (!hasMe && teams.length) teams[0].me = true;
       return { name: L.name || 'Lega', k: L.k || 1, budget: L.budget || 0, paid: paid, teams: teams };
     });
+  }
+
+  function loadLeagues(list) {
+    state.leagues = leaguesFromSeed(list);
     state.active = 0; state.sel = { A: [], B: [] };
     var L0 = state.leagues[0];
     if (L0) {
@@ -524,6 +530,22 @@
       state.opp = state.my === 0 ? (L0.teams.length > 1 ? 1 : 0) : 0;
     }
     syncTeamsCount();
+  }
+
+  // Le leghe incorporate nel sito cambiano quando le aggiorno (leghe nuove, crediti corretti),
+  // ma lo stato salvato nel browser le nascondeva: all'avvio aggiungo quelle che mancano senza
+  // toccare quelle che hai gia' (le tue modifiche, i crediti scritti a mano e i conguagli restano).
+  function mergeSeedLeagues() {
+    if (!SEED_LEAGUES.length) return 0;
+    var have = {};
+    state.leagues.forEach(function (L) { have[squashName(L.name)] = 1; });
+    var add = (leaguesFromSeed(SEED_LEAGUES) || []).filter(function (L) {
+      return !have[squashName(L.name)];
+    });
+    if (!add.length) return 0;
+    add.forEach(function (L) { state.leagues.push(L); });
+    saveState();
+    return add.length;
   }
 
   function loadDemo() {
@@ -2411,6 +2433,7 @@
       '</div>' +
       '<div class="toolbar" style="margin:8px 0 0">' +
         '<button class="ghost small" data-lg="csv">Importa rose CSV di Fantacalcio.it</button>' +
+        '<button class="ghost small" data-lg="seed" title="Aggiunge le leghe che sono nel sito ma non nel tuo browser, senza toccare quelle che hai gia">Aggiungi le leghe del sito</button>' +
         '<input type="file" id="fileLeague" accept=".csv,text/csv" multiple style="display:none">' +
         '<span class="hint" style="margin:0;display:inline-flex;align-items:center;gap:6px">Crediti d\'asta per squadra' +
           ' <input class="teamname" style="width:82px" type="number" min="0" step="50" data-budget="1" value="' + leagueBudget() + '"></span>' +
@@ -2832,6 +2855,11 @@
           renderAll();
         } else if (act === 'import') { openLeagueModal(); }
         else if (act === 'csv') { $('#fileLeague').click(); }
+        else if (act === 'seed') {
+          var n2 = mergeSeedLeagues();
+          syncHeader(); renderAll();
+          toast(n2 ? n2 + ' leghe aggiunte dal sito' : 'Nessuna lega nuova: ci sono gia\' tutte');
+        }
         return;
       }
       var b = e.target.closest('[data-act]');
@@ -3140,6 +3168,9 @@
   if (!loadState()) {
     if (SEED_LEAGUES.length) { loadLeagues(SEED_LEAGUES); toast('Caricate ' + SEED_LEAGUES.length + ' leghe dagli export di Fantacalcio.it'); }
     else loadDemo();
+  } else {
+    var aggiunte = mergeSeedLeagues();
+    if (aggiunte) toast(aggiunte + (aggiunte === 1 ? ' lega nuova trovata' : ' leghe nuove trovate') + ' nel sito: aggiunte in fondo al menu Lega');
   }
   if (!state.leagues.length) loadDemo();
   $('#nameA').value = teamA() ? teamA().name : '';
