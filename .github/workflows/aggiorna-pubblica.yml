@@ -100,9 +100,13 @@ jobs:
           else
             git status --short
             git commit -m "dati aggiornati $(date -u +%F)"
+            # se nel frattempo hai caricato qualcosa dal sito, il repository è andato avanti:
+            # mi riallineo invece di farmi rifiutare il push (era il motivo per cui il job
+            # falliva se caricavi file mentre il giro automatico stava girando)
+            git pull --rebase --autostash --quiet || true
             git push || {
-              echo "::error::push rifiutato. Settings -> Actions -> General -> Workflow permissions -> Read and write permissions"
-              exit 1
+              echo "::warning::push non riuscito (permessi di scrittura o commit arrivato nel frattempo)."
+              echo "::warning::I dati nuovi NON sono nel repository, ma il sito viene pubblicato lo stesso."
             }
           fi
 
