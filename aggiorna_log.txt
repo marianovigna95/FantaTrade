@@ -381,3 +381,43 @@ fantapazz: pagina scaricata
 righe lette da fantapazz: 482
 abbinati: 462 · non riconosciuti 14 · primi: Milinkovic (NAP); Floriani (LAZ); Rodriguez (TOR); Grandu (CAG); Sarr Pape M. (JUV); Galazzi (?); Kouda (?); Fanne (VEN)
 scritto consensus.json: 462 giocatori con tre fantamedie
+== 2026-11-21 12:36 refresh_data.py ==
+scritto fantatrade.html 569909 byte
+scritto dist/ (index.html, manifest.webmanifest, sw.js, icone, og.png, _headers, robots.txt)
+1/4 listone ufficiale fantacalcio.it…
+  listone ufficiale fantacalcio.it: 603 giocatori
+2/4 indice statistiche…
+  elenco statistiche: 2627 giocatori
+3/4 abbinamento…
+  abbinamento nomi: 575/603
+4/4 statistiche…
+  statistiche scaricate: 567
+  secondo tentativo su 37 candidati alternativi…
+  statistiche scaricate: 34
+  recuperati 15 giocatori
+  database finale: 603 giocatori (28 senza statistiche stagionali)
+  riepilogo cambiamenti: 0 in salita, 0 in discesa, 0 cambi di squadra
+  giornate giocate impostate a 11
+Fatto: fantatrade.html aggiornato.
+== 2026-11-21 12:38 fetch_extra.py ==
+scritto fantatrade.html 589211 byte
+scritto dist/ (index.html, manifest.webmanifest, sw.js, icone, og.png, _headers, robots.txt)
+! understat non disponibile: playersData non trovato nella pagina (sito cambiato o pagina di errore?)
+fonte fotmob: 333 giocatori con almeno 180 minuti · abbinati 330 · non riconosciuti 3
+  non riconosciuti (primi 10): Valde (Fiorentina); Romano Floriani (Lazio); Pote (Fiorentina)
+aggiornati 330 giocatori · campi: shots=309, sot=260, xa=330, xg=330
+ricompilo fantatrade.html …
+== 2026-11-21 12:38 fetch_avail.py ==
+indisponibili: pagina scaricata
+probabili formazioni: pagina scaricata
+indisponibili (pianetafanta): pagina scaricata
+diffidati: pagina scaricata
+indisponibili: 94 abbinati · 80 letti su pianetafanta (31 solo lì) · non riconosciuti 17
+probabili formazioni: 20 squadre · 220 titolari · 238 in panchina · giornata 12
+  non riconosciuti (primi 10): Dossena (Como); Grandu (Cagliari); Sulev (Cagliari); Sugamele (Cagliari); Borbei (Lecce); Konate A. (Parma); Pereyra M. (Napoli); Pellegri (Torino); Vinciati (Udinese); Ghion (Sassuolo)
+scritto avail.json: 94 fuori · 220 titolari con % · 4 diffidati
+== 2026-11-21 12:38 fetch_consensus.py ==
+fantapazz: pagina scaricata
+righe lette da fantapazz: 482
+abbinati: 462 · non riconosciuti 14 · primi: Milinkovic (NAP); Floriani (LAZ); Rodriguez (TOR); Grandu (CAG); Sarr Pape M. (JUV); Galazzi (?); Kouda (?); Fanne (VEN)
+scritto consensus.json: 462 giocatori con tre fantamedie
